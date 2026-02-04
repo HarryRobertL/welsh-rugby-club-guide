@@ -1,0 +1,22 @@
+{
+  "fixtures": [
+    {
+      "id": "m-001",
+      "home_team": "Team A",
+      "away_team": "Team B",
+      "kickoff_at": "2026-02-15T14:30:00Z",
+      "venue_name": "Park Field",
+      "status": "scheduled",
+      "round_label": "Round 1"
+    },
+    {
+      "home_team": "Team C",
+      "away_team": "Team D",
+      "date": "2026-02-16T15:00:00Z",
+      "venue": "Stadium",
+      "status": "live",
+      "home_score": 12,
+      "away_score": 7
+    }
+  ]
+}

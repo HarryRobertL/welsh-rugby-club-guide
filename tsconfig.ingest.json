@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": [
+    "ingestion/**/*.ts",
+    "lib/ingestion/**/*.ts",
+    "lib/supabase.ts",
+    "types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,26 @@
+{
+  "standings": [
+    {
+      "position": 1,
+      "team_name": "Team A",
+      "played": 10,
+      "won": 8,
+      "drawn": 1,
+      "lost": 1,
+      "points_for": 245,
+      "points_against": 120,
+      "table_points": 25
+    },
+    {
+      "position": 2,
+      "team_name": "Team B",
+      "played": 10,
+      "won": 7,
+      "drawn": 0,
+      "lost": 3,
+      "points_for": 180,
+      "points_against": 95,
+      "table_points": 21
+    }
+  ]
+}
