@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Link } from 'expo-router';
 import { useAuth } from '../../features/auth/AuthContext';
 import { updateNotificationPreferences } from '../../services/notification-preferences';
 import type { UserRole } from '../../types/database';
@@ -19,7 +20,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
  * File: app/(tabs)/account.tsx — route /account.
  */
 export default function AccountScreen() {
-  const { session, profile, signOut, refreshProfile, hasRole } = useAuth();
+  const { session, profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
   const [updating, setUpdating] = useState(false);
 
@@ -58,9 +59,14 @@ export default function AccountScreen() {
       <Text style={{ marginBottom: 16 }}>{email}</Text>
       <Text style={{ marginBottom: 4 }}>Role</Text>
       <Text style={{ marginBottom: 24 }}>{roleLabel}</Text>
-      {hasRole('club_admin') && (
-        <Text style={{ marginBottom: 16, fontStyle: 'italic' }}>Claim club (role-gated)</Text>
-      )}
+      <TouchableOpacity
+        onPress={() => router.push('/(tabs)/claim-club')}
+        style={{ padding: 10, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 8 }}
+      >
+        <Text style={{ fontSize: 12, color: '#666' }}>
+          {profile?.club_id ? 'Manage club claim' : 'Claim club'}
+        </Text>
+      </TouchableOpacity>
 
       <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 12 }}>Notifications</Text>
       <Text style={{ fontSize: 12, color: '#666', marginBottom: 16 }}>
@@ -97,6 +103,12 @@ export default function AccountScreen() {
         Quiet hours (do not disturb) — coming soon.
       </Text>
 
+      <TouchableOpacity
+        onPress={() => router.push('/(tabs)/debug')}
+        style={{ padding: 10, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: '#ccc', borderRadius: 8 }}
+      >
+        <Text style={{ fontSize: 12, color: '#666' }}>Debug (dev) – competitions & mapping</Text>
+      </TouchableOpacity>
       <TouchableOpacity
         onPress={handleSignOut}
         style={{ padding: 12, alignItems: 'center', backgroundColor: '#eee', borderRadius: 8 }}

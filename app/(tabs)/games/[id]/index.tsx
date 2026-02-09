@@ -12,7 +12,6 @@ import {
 import { FavouriteButton } from '../../../../components/FavouriteButton';
 import { useMatchCentre } from '../../../../features/games/useMatchCentre';
 import { useMatchEvents } from '../../../../features/live/useMatchEvents';
-import { useMyTeams } from '../../../../features/lineup/useMyTeams';
 import { useMatchLineups } from '../../../../features/lineup/useMatchLineups';
 import { useAuth } from '../../../../features/auth/AuthContext';
 import { submitMatchDispute } from '../../../../services/disputes';
@@ -55,12 +54,11 @@ export default function MatchCentreScreen() {
   const { events, connectionStatus } = useMatchEvents(matchCentre?.match_id ?? undefined, {
     onUpdate: refetch,
   });
-  const { profile, hasRole } = useAuth();
-  const { teams: myTeams } = useMyTeams();
-  const myTeamIds = new Set(myTeams.map((t) => t.id));
-  const isClubAdmin = hasRole('club_admin');
-  const canBuildHome = isClubAdmin && matchCentre && myTeamIds.has(matchCentre.home_team_id);
-  const canBuildAway = isClubAdmin && matchCentre && myTeamIds.has(matchCentre.away_team_id);
+  const { profile } = useAuth();
+  const isClubAdmin = profile?.role === 'club_admin';
+  const clubId = profile?.club_id ?? null;
+  const canBuildHome = isClubAdmin && !!clubId && matchCentre?.home_club_id === clubId;
+  const canBuildAway = isClubAdmin && !!clubId && matchCentre?.away_club_id === clubId;
   const { rows: homeLineupRows, loading: homeLineupLoading } = useMatchLineups(
     matchCentre?.match_id ?? undefined,
     matchCentre?.home_team_id ?? undefined,

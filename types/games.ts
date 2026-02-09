@@ -9,11 +9,16 @@ export type FixtureListItem = {
   id: string;
   scheduled_at: string;
   status: FixtureStatus;
+  home_team_id?: string;
+  away_team_id?: string;
   home_team_name: string;
   away_team_name: string;
   venue_name: string | null;
   score_home: number | null;
   score_away: number | null;
+  /** For grouping by league */
+  competition_id?: string;
+  competition_name?: string;
 };
 
 export type MatchCentre = {
@@ -26,6 +31,8 @@ export type MatchCentre = {
   away_team_id: string;
   home_team_name: string;
   away_team_name: string;
+  home_club_id: string | null;
+  away_club_id: string | null;
   venue_name: string | null;
   venue_address: string | null;
   score_home: number;

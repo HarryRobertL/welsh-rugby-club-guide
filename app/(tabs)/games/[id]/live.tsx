@@ -43,7 +43,7 @@ export default function LiveConsoleScreen() {
   useRoleGate(['club_admin'], '/(tabs)/games');
   const { profile } = useAuth();
 
-  const { matchCentre, refetch: refetchMatch } = useMatchCentre(fixtureId);
+  const { matchCentre, loading: matchLoading, error: matchError, refetch: refetchMatch } = useMatchCentre(fixtureId);
   const { events, loading, refetch: refetchEvents, connectionStatus } = useMatchEvents(matchId, {
     onUpdate: refetchMatch,
   });
@@ -134,6 +134,32 @@ export default function LiveConsoleScreen() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <Text style={{ color: '#666' }}>Missing match</Text>
+      </View>
+    );
+  }
+
+  const clubId = profile?.club_id ?? null;
+  const clubAllowed =
+    profile?.role === 'club_admin' &&
+    !!clubId &&
+    !!matchCentre &&
+    (matchCentre.home_club_id === clubId || matchCentre.away_club_id === clubId);
+
+  if (matchLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 12 }}>Checking club permissions…</Text>
+      </View>
+    );
+  }
+
+  if (matchError || !clubAllowed) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <Text style={{ color: '#666', textAlign: 'center', marginBottom: 12 }}>
+          {matchError ?? 'You can only run the live console for your own club.'}
+        </Text>
       </View>
     );
   }

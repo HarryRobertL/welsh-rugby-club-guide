@@ -71,6 +71,38 @@ export type Database = {
           created_at?: string;
         };
       };
+      pending_claims: {
+        Row: {
+          id: string;
+          user_id: string;
+          club_id: string;
+          requester_email: string | null;
+          status: string;
+          created_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          club_id: string;
+          requester_email?: string | null;
+          status?: string;
+          created_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          club_id?: string;
+          requester_email?: string | null;
+          status?: string;
+          created_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+      };
       ingest_sources: {
         Row: {
           id: string;

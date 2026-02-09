@@ -9,8 +9,8 @@ type MatchCentreRow = {
   away_team_id: string;
   scheduled_at: string;
   status: string;
-  home_team: { name: string } | { name: string }[] | null;
-  away_team: { name: string } | { name: string }[] | null;
+  home_team: { name: string; club_id: string } | { name: string; club_id: string }[] | null;
+  away_team: { name: string; club_id: string } | { name: string; club_id: string }[] | null;
   venue: { name: string; address: string | null } | null;
   matches: { id: string; score_home: number; score_away: number }[] | null;
 };
@@ -74,8 +74,8 @@ export function useMatchCentre(fixtureId: string | undefined): {
           away_team_id,
           scheduled_at,
           status,
-          home_team:teams!home_team_id(name),
-          away_team:teams!away_team_id(name),
+          home_team:teams!home_team_id(name, club_id),
+          away_team:teams!away_team_id(name, club_id),
           venue:venues(name, address),
           matches(id, score_home, score_away)
         `
@@ -105,6 +105,8 @@ export function useMatchCentre(fixtureId: string | undefined): {
         away_team_id: row.away_team_id,
         home_team_name: homeLabel,
         away_team_name: awayLabel,
+        home_club_id: homeTeam?.club_id ?? null,
+        away_club_id: awayTeam?.club_id ?? null,
         venue_name: row.venue?.name ?? null,
         venue_address: row.venue?.address ?? null,
         score_home: match?.score_home ?? 0,

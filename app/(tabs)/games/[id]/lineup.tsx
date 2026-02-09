@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../../../features/auth/AuthContext';
 import { useMatchLineups } from '../../../../features/lineup/useMatchLineups';
 import { useRoleGate } from '../../../../features/auth/useRoleGate';
+import { supabase } from '../../../../lib/supabase';
 import { publishLineup } from '../../../../services/lineup';
 import { sendMatchNotification } from '../../../../services/send-match-notifications';
 import {
@@ -47,6 +48,9 @@ export default function LineupBuilderScreen() {
     Array.from({ length: LINEUP_SIZE }, (_, i) => emptyRow(i + 1, i))
   );
   const [publishing, setPublishing] = useState(false);
+  const [clubCheckLoading, setClubCheckLoading] = useState(true);
+  const [clubCheckError, setClubCheckError] = useState<string | null>(null);
+  const [teamClubId, setTeamClubId] = useState<string | null>(null);
 
   useEffect(() => {
     if (existingRows.length > 0) {
@@ -62,6 +66,43 @@ export default function LineupBuilderScreen() {
       setRows(Array.from({ length: LINEUP_SIZE }, (_, i) => emptyRow(i + 1, i)));
     }
   }, [existingRows]);
+
+  useEffect(() => {
+    if (!teamId) {
+      setClubCheckLoading(false);
+      setTeamClubId(null);
+      return;
+    }
+    let active = true;
+    setClubCheckLoading(true);
+    setClubCheckError(null);
+    supabase
+      .from('teams')
+      .select('club_id')
+      .eq('id', teamId)
+      .single()
+      .then(({ data, error: err }) => {
+        if (!active) return;
+        if (err) {
+          setClubCheckError(err.message);
+          setTeamClubId(null);
+          return;
+        }
+        setTeamClubId((data as { club_id: string } | null)?.club_id ?? null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setClubCheckError(err instanceof Error ? err.message : 'Failed to load team');
+        setTeamClubId(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        setClubCheckLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [teamId]);
 
   const starters = useMemo(() => rows.slice(0, STARTERS_COUNT), [rows]);
   const bench = useMemo(() => rows.slice(STARTERS_COUNT, LINEUP_SIZE), [rows]);
@@ -100,6 +141,34 @@ export default function LineupBuilderScreen() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <Text style={{ color: '#666' }}>Missing match or team</Text>
+      </View>
+    );
+  }
+
+  const clubAllowed =
+    profile?.role === 'club_admin' &&
+    !!profile.club_id &&
+    !!teamClubId &&
+    profile.club_id === teamClubId;
+
+  if (clubCheckLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 12 }}>Checking club permissions…</Text>
+      </View>
+    );
+  }
+
+  if (clubCheckError || !clubAllowed) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <Text style={{ color: '#666', textAlign: 'center', marginBottom: 12 }}>
+          {clubCheckError ?? 'You can only manage lineups for your own club.'}
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 12, backgroundColor: '#eee' }}>
+          <Text>Back to match</Text>
+        </TouchableOpacity>
       </View>
     );
   }
