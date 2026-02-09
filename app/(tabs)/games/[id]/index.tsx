@@ -13,6 +13,7 @@ import { FavouriteButton } from '../../../../components/FavouriteButton';
 import { useMatchCentre } from '../../../../features/games/useMatchCentre';
 import { useMatchEvents } from '../../../../features/live/useMatchEvents';
 import { useMyTeams } from '../../../../features/lineup/useMyTeams';
+import { useMatchLineups } from '../../../../features/lineup/useMatchLineups';
 import { useAuth } from '../../../../features/auth/AuthContext';
 import { submitMatchDispute } from '../../../../services/disputes';
 
@@ -60,6 +61,16 @@ export default function MatchCentreScreen() {
   const isClubAdmin = hasRole('club_admin');
   const canBuildHome = isClubAdmin && matchCentre && myTeamIds.has(matchCentre.home_team_id);
   const canBuildAway = isClubAdmin && matchCentre && myTeamIds.has(matchCentre.away_team_id);
+  const { rows: homeLineupRows, loading: homeLineupLoading } = useMatchLineups(
+    matchCentre?.match_id ?? undefined,
+    matchCentre?.home_team_id ?? undefined,
+    { publishedOnly: true }
+  );
+  const { rows: awayLineupRows, loading: awayLineupLoading } = useMatchLineups(
+    matchCentre?.match_id ?? undefined,
+    matchCentre?.away_team_id ?? undefined,
+    { publishedOnly: true }
+  );
 
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
@@ -102,6 +113,48 @@ export default function MatchCentreScreen() {
 
   const m = matchCentre;
   const hasMatchId = !!m.match_id;
+  const lineupsLoading = homeLineupLoading || awayLineupLoading;
+  const hasPublishedLineups = homeLineupRows.length > 0 || awayLineupRows.length > 0;
+
+  const renderLineupBlock = (title: string, rows: typeof homeLineupRows) => {
+    const starters = rows.filter((r) => r.shirt_number <= 15);
+    const bench = rows.filter((r) => r.shirt_number > 15);
+    return (
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6 }}>{title}</Text>
+        {rows.length === 0 ? (
+          <Text style={{ fontSize: 12, color: '#666' }}>No lineup published</Text>
+        ) : (
+          <View style={{ gap: 6 }}>
+            {starters.length > 0 && (
+              <View>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Starters</Text>
+                {starters.map((row) => (
+                  <View key={`${title}-s-${row.shirt_number}`} style={{ flexDirection: 'row', gap: 8 }}>
+                    <Text style={{ width: 28, fontWeight: '600' }}>{row.shirt_number}</Text>
+                    <Text style={{ flex: 1 }}>{row.player_name || '—'}</Text>
+                    <Text style={{ color: '#666' }}>{row.position || ''}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {bench.length > 0 && (
+              <View style={{ marginTop: 6 }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Bench</Text>
+                {bench.map((row) => (
+                  <View key={`${title}-b-${row.shirt_number}`} style={{ flexDirection: 'row', gap: 8 }}>
+                    <Text style={{ width: 28, fontWeight: '600' }}>{row.shirt_number}</Text>
+                    <Text style={{ flex: 1 }}>{row.player_name || '—'}</Text>
+                    <Text style={{ color: '#666' }}>{row.position || ''}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
@@ -210,9 +263,18 @@ export default function MatchCentreScreen() {
                 <Text style={{ fontWeight: '600' }}>Build team sheet — {m.away_team_name}</Text>
               </TouchableOpacity>
             )}
-            {!canBuildHome && !canBuildAway && (
+            {lineupsLoading ? (
+              <View style={{ padding: 16, alignItems: 'center' }}>
+                <ActivityIndicator />
+              </View>
+            ) : hasPublishedLineups ? (
+              <View style={{ padding: 12, backgroundColor: '#f8f8f8', borderRadius: 8 }}>
+                {renderLineupBlock(m.home_team_name, homeLineupRows)}
+                {renderLineupBlock(m.away_team_name, awayLineupRows)}
+              </View>
+            ) : (
               <View style={{ padding: 24, backgroundColor: '#f0f0f0', borderRadius: 8, alignItems: 'center' }}>
-                <Text style={{ color: '#666' }}>Team sheets placeholder</Text>
+                <Text style={{ color: '#666' }}>No team sheets published yet</Text>
               </View>
             )}
           </View>

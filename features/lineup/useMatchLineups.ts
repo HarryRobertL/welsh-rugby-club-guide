@@ -16,7 +16,8 @@ type LineupDbRow = {
  */
 export function useMatchLineups(
   matchId: string | undefined,
-  teamId: string | undefined
+  teamId: string | undefined,
+  options?: { publishedOnly?: boolean }
 ): {
   rows: LineupRow[];
   loading: boolean;
@@ -36,12 +37,13 @@ export function useMatchLineups(
     setLoading(true);
     setError(null);
     try {
-      const { data, error: err } = await supabase
+      const query = supabase
         .from('match_lineups')
         .select('id, shirt_number, position, player_name, sort_order')
         .eq('match_id', matchId)
         .eq('team_id', teamId)
         .order('sort_order', { ascending: true });
+      const { data, error: err } = options?.publishedOnly ? await query.eq('published', true) : await query;
       if (err) throw err;
       const raw = (data ?? []) as LineupDbRow[];
       setRows(
@@ -58,7 +60,7 @@ export function useMatchLineups(
     } finally {
       setLoading(false);
     }
-  }, [matchId, teamId]);
+  }, [matchId, options?.publishedOnly, teamId]);
 
   useEffect(() => {
     fetch();

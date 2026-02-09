@@ -36,6 +36,7 @@ export async function publishLineup(
       position: r.position || null,
       player_name: r.player_name || null,
       sort_order: r.sort_order,
+      published: true,
     }));
     const { error: insertErr } = await (supabase.from('match_lineups') as any).insert(inserts);
     if (insertErr) return { error: insertErr as Error };
