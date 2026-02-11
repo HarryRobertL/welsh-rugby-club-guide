@@ -6,7 +6,7 @@ type StandingsRow = {
   id: string;
   position: number;
   team_id: string;
-  team: { name: string } | null;
+  team: { name: string } | { name: string }[] | null;
   played: number;
   won: number;
   drawn: number;
@@ -60,21 +60,29 @@ export function useStandings(seasonId: string | undefined): {
         .order('position', { ascending: true });
       if (err) throw err;
       const raw = (data ?? []) as StandingsRow[];
+      const safeTeamName = (t: unknown): string => {
+        if (typeof t === 'string' && t.trim()) return t.trim();
+        if (t && typeof t === 'object' && 'name' in t && typeof (t as { name: unknown }).name === 'string') return (t as { name: string }).name;
+        return '—';
+      };
       setRows(
-        raw.map((r) => ({
-          id: r.id,
-          position: r.position,
-          team_id: r.team_id,
-          team_name: r.team?.name ?? '—',
-          played: r.played,
-          won: r.won,
-          drawn: r.drawn,
-          lost: r.lost,
-          points_for: r.points_for,
-          points_against: r.points_against,
-          points: r.points,
-          form: '', // filled by useStandingsWithForm or caller
-        }))
+        raw.map((r) => {
+          const teamObj = Array.isArray(r.team) ? r.team[0] : r.team;
+          return {
+            id: r.id,
+            position: r.position,
+            team_id: r.team_id,
+            team_name: safeTeamName(teamObj?.name ?? teamObj) ?? '—',
+            played: r.played,
+            won: r.won,
+            drawn: r.drawn,
+            lost: r.lost,
+            points_for: r.points_for,
+            points_against: r.points_against,
+            points: r.points,
+            form: '', // filled by useStandingsWithForm or caller
+          };
+        })
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load standings');

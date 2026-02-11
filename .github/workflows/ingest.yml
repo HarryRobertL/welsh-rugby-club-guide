@@ -1,0 +1,44 @@
+name: Ingestion (Scheduled)
+
+on:
+  schedule:
+    # Daily refresh (GMT/UTC)
+    - cron: "0 6 * * *"
+    # Every 4 hours on weekdays (GMT/UTC)
+    - cron: "0 */4 * * 1-5"
+    # Hourly during weekends (GMT/UTC, Sat/Sun)
+    - cron: "0 * * * 6,0"
+  workflow_dispatch: {}
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # Optional: if you want to keep the cookie in GitHub Secrets for OVAL attempts
+      # SIXNATIONS_COOKIE: ${{ secrets.SIXNATIONS_COOKIE }}
+      # SIXNATIONS_USER_AGENT: ${{ secrets.SIXNATIONS_USER_AGENT }}
+      # SIXNATIONS_REFERER: ${{ secrets.SIXNATIONS_REFERER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: AllWalesSport ingest
+        run: INGEST_SOURCE=allwalessport npm run ingest
+
+      - name: MyWRU ingest
+        run: npm run ingest
+
+      - name: Six Nations (www) ingest
+        run: INGEST_SOURCE=sixnations_www npm run ingest

@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { ensureString } from '../../lib/teamLabel';
+import { toTeamDisplayString } from '../../lib/teamLabel';
 import type { FixtureListItem } from '../../types/games';
 
 const FIXTURES_LIMIT = 150;
 
-type TeamRelation = { name?: string; organisationName?: string } | { name?: string; organisationName?: string }[] | null;
+/** Start of today UTC – used for "upcoming" so we load from today forward. */
+function startOfTodayUTC(): string {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString();
+}
 
 type FixtureRow = {
   id: string;
@@ -13,21 +17,12 @@ type FixtureRow = {
   status: string;
   home_team_id: string;
   away_team_id: string;
-  home_team: TeamRelation;
-  away_team: TeamRelation;
+  home_team: unknown;
+  away_team: unknown;
   venue: { name: string } | null;
   matches: { score_home: number; score_away: number }[] | null;
   season?: { competition_id: string; competitions: { id: string; name: string } | null } | null;
 };
-
-function teamNameFromRelation(v: TeamRelation): string {
-  const raw = Array.isArray(v) ? v[0] : v;
-  if (raw && typeof raw === 'object') {
-    const name = (raw as { name?: string }).name ?? (raw as { organisationName?: string }).organisationName;
-    if (typeof name === 'string' && name.trim()) return name.trim();
-  }
-  return '—';
-}
 
 /**
  * Fetches fixtures with competition info for Games tab. One query, no N+1.
@@ -52,9 +47,10 @@ export function useFixturesList(params: {
     setError(null);
     try {
       const nowIso = params.now.toISOString();
+      const fromTodayIso = params.mode === 'upcoming' ? startOfTodayUTC() : nowIso;
       const hasCompetitionFilter = Array.isArray(params.competitionIds) && params.competitionIds.length > 0;
       const filter = params.mode === 'upcoming'
-        ? `scheduled_at.gte.${nowIso},status.eq.live`
+        ? `scheduled_at.gte.${fromTodayIso},status.eq.live`
         : `status.eq.full_time,scheduled_at.lt.${nowIso}`;
       let query = supabase
         .from('fixtures')
@@ -88,8 +84,8 @@ export function useFixturesList(params: {
           status: row.status as FixtureListItem['status'],
           home_team_id: row.home_team_id,
           away_team_id: row.away_team_id,
-          home_team_name: ensureString(teamNameFromRelation(row.home_team)),
-          away_team_name: ensureString(teamNameFromRelation(row.away_team)),
+          home_team_name: toTeamDisplayString(row.home_team),
+          away_team_name: toTeamDisplayString(row.away_team),
           venue_name: row.venue?.name ?? null,
           score_home: row.matches?.[0]?.score_home ?? null,
           score_away: row.matches?.[0]?.score_away ?? null,
@@ -98,7 +94,7 @@ export function useFixturesList(params: {
         };
       }).filter((row) => {
         if (params.mode === 'upcoming') {
-          return row.status === 'live' || row.scheduled_at >= nowIso;
+          return row.status === 'live' || row.scheduled_at >= fromTodayIso;
         }
         if (row.status === 'full_time') return true;
         const hasResult = row.score_home != null && row.score_away != null;

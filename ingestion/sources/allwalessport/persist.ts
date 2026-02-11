@@ -8,6 +8,7 @@
 
 import { createHash } from 'crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { deriveCompetitionTypeFromName } from '../../lib/deriveCompetitionType';
 import type {
   CanonicalFixture,
   CanonicalResult,
@@ -59,6 +60,8 @@ export type PersistCanonicalOptions = {
   standings: CanonicalStanding[];
   /** Optional year from page (e.g. 2026) for season. */
   seasonYear?: number | null;
+  /** Optional season name from parser (e.g. 2025/26). */
+  seasonName?: string | null;
 };
 
 export type PersistCanonicalResult = {
@@ -145,19 +148,25 @@ async function ensureCompetition(
   cid: number,
   label: string
 ): Promise<string> {
+  const raw = (label ?? '').trim();
+  const nameToStore = !raw || /^Competition\s+\d+$/i.test(raw) ? 'Super Rygbi Cymru' : label;
+  const sourceRef = String(cid);
   const slug = `allwalessport-${cid}`;
-  let { data: comp } = await (supabase.from('competitions') as any)
+  // For allwalessport, identity is source + source_ref only. Never match by slug or name.
+  const { data: comp, error } = await (supabase.from('competitions') as any)
+    .upsert(
+      {
+        name: nameToStore,
+        slug,
+        competition_type: deriveCompetitionTypeFromName(label),
+        source: SOURCE,
+        source_ref: sourceRef,
+      },
+      { onConflict: 'source,source_ref' }
+    )
     .select('id')
-    .eq('slug', slug)
-    .maybeSingle();
-  if (!comp?.id) {
-    const { data: ins, error } = await (supabase.from('competitions') as any)
-      .insert({ name: label, slug, competition_type: TEAM_TYPE })
-      .select('id')
-      .single();
-    if (error) throw new Error(`competitions insert: ${(error as Error).message}`);
-    comp = ins;
-  }
+    .single();
+  if (error) throw new Error(`competitions upsert: ${(error as Error).message}`);
   return (comp as { id: string }).id;
 }
 
@@ -165,10 +174,11 @@ async function ensureSeason(
   supabase: SupabaseClient,
   competitionId: string,
   cid: number,
-  seasonYear: number | null | undefined
+  seasonYear: number | null | undefined,
+  seasonName?: string | null
 ): Promise<string> {
   const year = seasonYear ?? new Date().getFullYear();
-  const name = seasonYear != null ? `${year}/${String(year + 1).slice(-2)}` : 'Unknown Season';
+  const name = seasonName && seasonName.trim() ? seasonName.trim() : 'Unknown season';
   const startDate = `${year}-07-01`;
   const endDate = `${year + 1}-06-30`;
 
@@ -250,6 +260,7 @@ export async function persistCanonicalPayloads(
     results,
     standings,
     seasonYear,
+    seasonName,
   } = options;
   const result: PersistCanonicalResult = {
     error: null,
@@ -260,9 +271,24 @@ export async function persistCanonicalPayloads(
   };
 
   try {
+    const parsedStandingsCount = standings.length;
+    if (parsedStandingsCount > 0) {
+      console.info('[AllWalesSport persist] standings', {
+        source_ref: String(competitionCid),
+        competitionLabel,
+        sourceUrl,
+        parsedStandingsCount,
+      });
+    }
     const { clubId } = await ensureRegionAndClub(supabase);
     result.competitionId = await ensureCompetition(supabase, competitionCid, competitionLabel);
-    result.seasonId = await ensureSeason(supabase, result.competitionId, competitionCid, seasonYear);
+    result.seasonId = await ensureSeason(
+      supabase,
+      result.competitionId,
+      competitionCid,
+      seasonYear,
+      seasonName
+    );
     const seasonId = result.seasonId;
 
     const teamCache = new Map<string, string>();
@@ -452,9 +478,18 @@ export async function persistCanonicalPayloads(
         console.warn('[AllWalesSport persist] standing row error', s.team_name, (e as Error).message);
       }
     }
+    if (parsedStandingsCount > 0) {
+      console.info('[AllWalesSport persist] standings written', {
+        source_ref: String(competitionCid),
+        competitionId: result.competitionId,
+        seasonId: result.seasonId,
+        parsedStandingsCount,
+        writtenStandingsCount: result.standingsWritten,
+      });
+    }
   } catch (e) {
     result.error = (e as Error).message;
-    console.error('[AllWalesSport persist] competition failed', competitionCid, result.error);
+    console.error('[AllWalesSport persist] competition failed', competitionCid, sourceUrl, result.error);
   }
 
   return result;
@@ -486,7 +521,7 @@ export type RunPersistAllWalesSportResult = {
 export async function runPersistAllWalesSport(
   options: RunPersistAllWalesSportOptions
 ): Promise<RunPersistAllWalesSportResult> {
-  const { supabase, afterRunCreatedAt, limit = 50, dryRun = false } = options;
+  const { supabase, afterRunCreatedAt, limit = 500, dryRun = false } = options;
   const out: RunPersistAllWalesSportResult = {
     error: null,
     competitionsProcessed: 0,
@@ -542,7 +577,12 @@ export async function runPersistAllWalesSport(
         fixtures: [],
         results: [],
         standings: [],
-        label: (row.payload?.competitionLabel as string) ?? `Competition ${cid}`,
+        label: (() => {
+          const n = (row.payload?.competitionLabel as string) ?? '';
+          const t = (n ?? '').trim();
+          if (!t || /^Competition\s+\d+$/i.test(t)) return 'Super Rygbi Cymru';
+          return n;
+        })(),
         sourceUrl: (row.payload?.sourceUrl as string) ?? '',
         ingestItemIds: {},
       });
@@ -576,7 +616,12 @@ export async function runPersistAllWalesSport(
       const firstFixture = g.fixtures[0] as { parsedDateIso?: string | null } | undefined;
       const firstResult = g.results[0] as { parsedDateIso?: string | null } | undefined;
       const d = firstFixture?.parsedDateIso ?? firstResult?.parsedDateIso;
-      const seasonYear = typeof d === 'string' && d.length >= 4 ? parseInt(d.slice(0, 4), 10) || undefined : undefined;
+      const seasonYear =
+        typeof d === 'string' && d.length >= 4
+          ? parseInt(d.slice(0, 4), 10) || undefined
+          : undefined;
+      const seasonName =
+        seasonYear != null ? `${seasonYear}/${String(seasonYear + 1).slice(-2)}` : undefined;
 
       const persistResult = await persistCanonicalPayloads({
         supabase,
@@ -590,6 +635,7 @@ export async function runPersistAllWalesSport(
         results: g.results as CanonicalResult[],
         standings: g.standings as CanonicalStanding[],
         seasonYear,
+        seasonName,
       });
       if (persistResult.error) {
         out.failures.push(`cid ${cid}: ${persistResult.error}`);

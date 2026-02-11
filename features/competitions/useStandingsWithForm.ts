@@ -17,6 +17,8 @@ export function useStandingsWithForm(seasonId: string | undefined): {
   const [rows, setRows] = useState<LeagueTableRow[]>([]);
   const [formLoading, setFormLoading] = useState(false);
 
+  const FORM_FETCH_MAX = 20;
+
   const loadForms = useCallback(async (standingsRows: LeagueTableRow[]) => {
     if (standingsRows.length === 0) {
       setRows(standingsRows);
@@ -24,11 +26,12 @@ export function useStandingsWithForm(seasonId: string | undefined): {
     }
     setFormLoading(true);
     try {
-      const forms = await Promise.all(standingsRows.map((r) => getTeamForm(r.team_id)));
+      const slice = standingsRows.slice(0, FORM_FETCH_MAX);
+      const forms = await Promise.all(slice.map((r) => getTeamForm(r.team_id)));
       setRows(
         standingsRows.map((r, i) => ({
           ...r,
-          form: forms[i] ?? '',
+          form: i < slice.length ? (forms[i] ?? '') : '',
         }))
       );
     } catch {

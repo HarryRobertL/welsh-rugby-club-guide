@@ -54,7 +54,7 @@ Football solved this with Cymru Football. Rugby hasn’t.
 
 **Geography**
 
-- South Wales Valleys
+- Wales
 
 **Rugby types**
 

@@ -12,10 +12,7 @@ import type { CheerioAPI, Cheerio } from 'cheerio';
 const MONTHS =
   'January|February|March|April|May|June|July|August|September|October|November|December';
 /** Match "6 February 2026" or "31 January 2026" */
-const DATE_HEADING_REGEX = new RegExp(
-  `(\\d{1,2})\\s+(${MONTHS})\\s+(\\d{4})`,
-  'gi'
-);
+const DATE_HEADING_REGEX = new RegExp(`(\\d{1,2})\\s+(${MONTHS})\\s+(\\d{4})`, 'i');
 
 /** Match score: "12 10", "12 to 10", "12-10", "12:10" */
 const SCORE_REGEX = /(\d+)\s*(?:to|-|:|\s)\s*(\d+)/;
@@ -86,8 +83,7 @@ function normalizeWhitespace(s: string): string {
 }
 
 function extractDateFromHeading(text: string): string | null {
-  const re = new RegExp(`(\\d{1,2})\\s+(${MONTHS})\\s+(\\d{4})`, 'i');
-  const m = re.exec(text);
+  const m = DATE_HEADING_REGEX.exec(text);
   if (!m) return null;
   return `${m[1]} ${m[2]} ${m[3]}`;
 }

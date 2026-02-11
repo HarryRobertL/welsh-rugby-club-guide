@@ -32,11 +32,18 @@ export type AllWalesSportHttpLogger = {
   error: (message: string, data?: AllWalesSportHttpLogData) => void;
 };
 
+/** Only these fields are safe to log (no secrets, no cookies). */
+const SAFE_LOG_KEYS = new Set(['url', 'status', 'bytes', 'durationMs', 'retryCount', 'fromCache']);
+
 function defaultLogger(): AllWalesSportHttpLogger {
   const prefix = '[AllWalesSportHttp]';
   const format = (msg: string, data?: AllWalesSportHttpLogData) => {
     if (!data || Object.keys(data).length === 0) return `${prefix} ${msg}`;
-    return `${prefix} ${msg} ${JSON.stringify(data)}`;
+    const safe: Record<string, unknown> = {};
+    for (const k of Object.keys(data)) {
+      if (SAFE_LOG_KEYS.has(k)) (safe as Record<string, unknown>)[k] = (data as Record<string, unknown>)[k];
+    }
+    return `${prefix} ${msg} ${JSON.stringify(safe)}`;
   };
   return {
     info: (msg, data) => console.info(format(msg, data)),
@@ -71,6 +78,8 @@ export function createAllWalesSportHttpClient(
   const logger = options.logger ?? defaultLogger();
   const cache = new Map<string, string>();
   let lastRequestTime = 0;
+  /** Serialize rate limit so concurrent callers still respect req/s. */
+  let slotPromise: Promise<void> = Promise.resolve();
 
   const defaultHeaders: Record<string, string> = {
     'User-Agent': options.userAgent,
@@ -87,12 +96,18 @@ export function createAllWalesSportHttpClient(
   }
 
   async function rateLimit(): Promise<void> {
+    const myTurn = slotPromise;
+    let release: () => void;
+    slotPromise = new Promise<void>((r) => {
+      release = r;
+    });
+    await myTurn;
     const now = Date.now();
     const elapsed = now - lastRequestTime;
-    if (elapsed < minDelayMs) {
-      await new Promise((r) => setTimeout(r, minDelayMs - elapsed));
-    }
+    const waitMs = Math.max(0, minDelayMs - elapsed);
+    if (waitMs > 0) await new Promise((r) => setTimeout(r, waitMs));
     lastRequestTime = Date.now();
+    release!();
   }
 
   async function fetchHtml(url: string): Promise<string> {

@@ -9,6 +9,7 @@ import { join } from 'path';
 import type { IngestHttpClient } from '../lib/http';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  activeCompetitions,
   competitionGroups,
   competitionDetails,
   competitionGroupLeagueTable,
@@ -21,6 +22,7 @@ export type MyWruConfig = {
   /** When set, discovery uses this base URL for /competition/{id}/groups and /overview (e.g. a JSON API). */
   groupsApiBaseUrl?: string;
   roots?: { type: string; id: number; label: string }[];
+  useActiveCompetitions?: boolean;
   knownCompetitionOverviewUrls?: string[];
   request?: { minDelayMs?: number; maxRequestsPerRun?: number };
 };
@@ -38,6 +40,7 @@ export function loadMyWruConfig(): MyWruConfig {
       (r): r is { type: string; id: number; label: string } =>
         r && typeof r === 'object' && r.type === 'competitionInstance' && typeof (r as { id?: number }).id === 'number' && typeof (r as { label?: string }).label === 'string'
     ),
+    useActiveCompetitions: parsed.useActiveCompetitions !== false,
     knownCompetitionOverviewUrls: (parsed.knownCompetitionOverviewUrls as string[]) ?? [],
     request: parsed.request as MyWruConfig['request'],
   };
@@ -221,7 +224,7 @@ export async function runMyWruDiscovery(
 ): Promise<{ error: string | null; stats: { instances: number; groups: number; endpoints: number; ingestItems: number } }> {
   const { httpClient, supabase } = options;
   const config = options.config ?? loadMyWruConfig();
-  const roots = config.roots ?? [];
+  let roots = config.roots ?? [];
   const stats = { instances: 0, groups: 0, endpoints: 0, ingestItems: 0 };
 
   const sourceId = await ensureMyWruSource(supabase);
@@ -238,10 +241,32 @@ export async function runMyWruDiscovery(
   const runId = (runRow as { id: string }).id;
 
   try {
+    if (config.useActiveCompetitions || roots.length === 0) {
+      try {
+        const res = await httpClient.get(activeCompetitions());
+        if (res.status >= 200 && res.status < 300) {
+          const data = JSON.parse(res.body) as { id?: number; name?: string }[];
+          const activeRoots = (Array.isArray(data) ? data : [])
+            .filter((d) => typeof d?.id === 'number' && typeof d?.name === 'string')
+            .map((d) => ({
+              type: 'competitionInstance',
+              id: d.id as number,
+              label: d.name as string,
+            }));
+          const byId = new Map<number, { type: string; id: number; label: string }>();
+          for (const r of roots) byId.set(r.id, r);
+          for (const r of activeRoots) byId.set(r.id, r);
+          roots = Array.from(byId.values());
+        }
+      } catch (e) {
+        console.warn('[ingestion] MyWRU active competitions fetch failed', (e as Error).message);
+      }
+    }
+
     for (const root of roots) {
       const competitionInstanceId = String(root.id);
       const groupsPath = competitionGroups(root.id);
-      const detailsPath = competitionDetails(root.id);
+      const detailsPath = `${config.baseUrl.replace(/\/$/, '')}${competitionDetails(root.id)}`;
 
       if (httpClient.hasReachedRequestLimit()) break;
 

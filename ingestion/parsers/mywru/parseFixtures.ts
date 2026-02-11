@@ -11,6 +11,26 @@ function safeStr(v: unknown): string {
   return typeof v === 'string' ? v : String(v);
 }
 
+function safeTeamName(v: unknown): string {
+  if (v == null) return '';
+  if (Array.isArray(v)) return safeTeamName(v[0]);
+  if (typeof v === 'string') return v.trim();
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    const name =
+      o.name ??
+      o.organisationName ??
+      o.teamName ??
+      o.clubName ??
+      o.shortName ??
+      o.label ??
+      o.title;
+    if (typeof name === 'string' && name.trim()) return name.trim();
+  }
+  return '';
+}
+
 function safeNum(v: unknown): number | null {
   if (v == null) return null;
   if (typeof v === 'number' && !Number.isNaN(v)) return v;
@@ -81,26 +101,53 @@ export function parseFixtures(
   const out: NormalizedMatchRow[] = [];
 
   for (const m of matches) {
-    const home = safeStr(m.home_team ?? m.homeTeam ?? m.home ?? m.team_a).trim();
-    const away = safeStr(m.away_team ?? m.awayTeam ?? m.away ?? m.team_b).trim();
-    if (!home || !away) continue;
+    const homeName = safeTeamName(
+      m.home_team ??
+        m.homeTeam ??
+        m.home ??
+        m.team_a ??
+        m.homeTeamName ??
+        m.home_team_name ??
+        m.teamAName ??
+        m.teamA
+    );
+    const awayName = safeTeamName(
+      m.away_team ??
+        m.awayTeam ??
+        m.away ??
+        m.team_b ??
+        m.awayTeamName ??
+        m.away_team_name ??
+        m.teamBName ??
+        m.teamB
+    );
+    if (!homeName || !awayName) continue;
 
-    const kickoff_at = toIsoLike(m.kickoff ?? m.kickoff_at ?? m.date ?? m.scheduled_at ?? m.start);
+    const kickoff_at = toIsoLike(
+      m.kickoff ??
+        m.kickoff_at ??
+        m.date ??
+        m.scheduled_at ??
+        m.start ??
+        m.kickoffDateTime ??
+        m.kickoff_time ??
+        m.fixtureDate
+    );
     const stableId =
       m.id ?? m.match_id ?? m.fixture_id ?? m.event_id ?? m.external_id;
     const source_match_ref =
       stableId != null && String(stableId).trim()
         ? String(stableId).trim()
-        : hashMatchRef(competition_group_id, home, away, kickoff_at);
+        : hashMatchRef(competition_group_id, homeName, awayName, kickoff_at);
 
     out.push({
       competition_group_id,
       source_match_ref,
       kickoff_at,
-      home_team_name: home,
-      away_team_name: away,
+      home_team_name: homeName,
+      away_team_name: awayName,
       venue_name: safeStr(m.venue ?? m.venue_name ?? m.venueName).trim() || null,
-      status: normalizeStatus(m.status ?? m.state ?? m.match_status),
+      status: normalizeStatus(m.status ?? m.state ?? m.match_status ?? m.fixtureStatus ?? m.resultStatus),
       score_home: safeNum(m.score_home ?? m.home_score ?? m.homeScore ?? m.scoreHome),
       score_away: safeNum(m.score_away ?? m.away_score ?? m.awayScore ?? m.scoreAway),
       round_label: safeStr(m.round ?? m.round_label ?? m.roundLabel ?? m.matchday).trim() || null,

@@ -1,0 +1,343 @@
+{
+  "sport": "rugby_union",
+  "source": "allwalessport_left_nav",
+  "categories": [
+    {
+      "name": "Internationals",
+      "slug": "internationals",
+      "children": [
+        { "name": "6 Nations 2026", "slug": "6-nations-2026" },
+        { "name": "Womens 6 Nations", "slug": "womens-6-nations" },
+        { "name": "Autumn Series - Men", "slug": "autumn-series-men" },
+        { "name": "Rugby Championship", "slug": "rugby-championship" },
+        { "name": "Summer Series - Men", "slug": "summer-series-men" },
+        { "name": "Summer Series - Women", "slug": "summer-series-women" }
+      ]
+    },
+    {
+      "name": "Rugby Friendlies",
+      "slug": "rugby-friendlies",
+      "children": [
+        { "name": "Friendlies - Men", "slug": "friendlies-men" },
+        { "name": "Friendlies - Women", "slug": "friendlies-women" }
+      ]
+    },
+    {
+      "name": "B & I Lions",
+      "slug": "b-and-i-lions",
+      "children": [{ "name": "B & I Lions", "slug": "b-and-i-lions" }]
+    },
+    {
+      "name": "Womens World Cup",
+      "slug": "womens-world-cup",
+      "children": [
+        { "name": "Finals", "slug": "finals" },
+        { "name": "Pool A", "slug": "pool-a" },
+        { "name": "Pool B", "slug": "pool-b" },
+        { "name": "Pool C", "slug": "pool-c" },
+        { "name": "Pool D", "slug": "pool-d" }
+      ]
+    },
+    {
+      "name": "Under 20s Rugby",
+      "slug": "under-20s-rugby",
+      "children": [{ "name": "6 Nations U20", "slug": "6-nations-u20" }]
+    },
+    {
+      "name": "Europe Champions Cup",
+      "slug": "europe-champions-cup",
+      "children": [
+        { "name": "Finals", "slug": "finals" },
+        { "name": "Pool 1", "slug": "pool-1" },
+        { "name": "Pool 2", "slug": "pool-2" },
+        { "name": "Pool 3", "slug": "pool-3" },
+        { "name": "Pool 4", "slug": "pool-4" }
+      ]
+    },
+    {
+      "name": "Europe Challenge Cup",
+      "slug": "europe-challenge-cup",
+      "children": [
+        { "name": "Finals", "slug": "finals" },
+        { "name": "Pool 1", "slug": "pool-1" },
+        { "name": "Pool 2", "slug": "pool-2" },
+        { "name": "Pool 3", "slug": "pool-3" }
+      ]
+    },
+    {
+      "name": "United Rugby Championship",
+      "slug": "united-rugby-championship",
+      "children": [{ "name": "Championship", "slug": "championship" }]
+    },
+    {
+      "name": "Super Rugby Cymru",
+      "slug": "super-rugby-cymru",
+      "children": [
+        { "name": "SRC Trophy", "slug": "src-trophy" },
+        { "name": "SRC Cup - Pool A", "slug": "src-cup-pool-a" },
+        { "name": "SRC Cup - Pool B", "slug": "src-cup-pool-b" }
+      ]
+    },
+    {
+      "name": "WRU Premiership",
+      "slug": "wru-premiership",
+      "children": [{ "name": "Premiership", "slug": "premiership" }]
+    },
+    {
+      "name": "WRU Premiership Cup",
+      "slug": "wru-premiership-cup",
+      "children": [{ "name": "Premiership Cup", "slug": "premiership-cup" }]
+    },
+    {
+      "name": "Gallagher Premiership",
+      "slug": "gallagher-premiership",
+      "children": [{ "name": "Gallagher Premiership", "slug": "gallagher-premiership" }]
+    },
+    {
+      "name": "WRU Championship",
+      "slug": "wru-championship",
+      "children": [
+        { "name": "Championship - East", "slug": "championship-east" },
+        { "name": "Championship - West", "slug": "championship-west" }
+      ]
+    },
+    {
+      "name": "WRU Championship Cup",
+      "slug": "wru-championship-cup",
+      "children": [{ "name": "Championship Cup", "slug": "championship-cup" }]
+    },
+    {
+      "name": "RFU Championship",
+      "slug": "rfu-championship",
+      "children": [{ "name": "RFU Championship", "slug": "rfu-championship" }]
+    },
+    {
+      "name": "BUCS Rugby",
+      "slug": "bucs-rugby",
+      "children": [
+        { "name": "BUCS Men", "slug": "bucs-men" },
+        { "name": "BUCS Women", "slug": "bucs-women" },
+        { "name": "Tier 1 Women", "slug": "tier-1-women" },
+        { "name": "Tier 2 Women", "slug": "tier-2-women" }
+      ]
+    },
+    {
+      "name": "Womens Rugby",
+      "slug": "womens-rugby",
+      "children": [
+        { "name": "Regions", "slug": "regions" },
+        { "name": "Celtic Challenge", "slug": "celtic-challenge" },
+        { "name": "Premiership", "slug": "premiership" },
+        { "name": "Championship", "slug": "championship" },
+        { "name": "Central", "slug": "central" },
+        { "name": "East Wales", "slug": "east-wales" },
+        { "name": "North Wales", "slug": "north-wales" },
+        { "name": "West Wales", "slug": "west-wales" },
+        { "name": "WRU Cup", "slug": "wru-cup" },
+        { "name": "WRU Plate", "slug": "wru-plate" },
+        { "name": "WRU Bowl", "slug": "wru-bowl" },
+        { "name": "Premier 15", "slug": "premier-15" }
+      ]
+    },
+    {
+      "name": "PSUK British Police",
+      "slug": "psuk-british-police",
+      "children": [
+        { "name": "Internationals", "slug": "internationals" },
+        { "name": "Police Cup - North", "slug": "police-cup-north" },
+        { "name": "Police Cup - South", "slug": "police-cup-south" },
+        { "name": "Police Plate - North", "slug": "police-plate-north" },
+        { "name": "Police Plate - South", "slug": "police-plate-south" },
+        { "name": "Police Shield - East", "slug": "police-shield-east" },
+        { "name": "Police Shield - West", "slug": "police-shield-west" }
+      ]
+    },
+    {
+      "name": "WRU East",
+      "slug": "wru-east",
+      "children": [
+        { "name": "Division 1 East", "slug": "division-1-east" },
+        { "name": "Division 2 East", "slug": "division-2-east" },
+        { "name": "Division 3 East", "slug": "division-3-east" },
+        { "name": "Division 4 East", "slug": "division-4-east" },
+        { "name": "Division 5 East", "slug": "division-5-east" },
+        { "name": "Division 6 East", "slug": "division-6-east" }
+      ]
+    },
+    {
+      "name": "WRU East Central",
+      "slug": "wru-east-central",
+      "children": [
+        { "name": "Division 1 East Central", "slug": "division-1-east-central" },
+        { "name": "Division 2 East Central", "slug": "division-2-east-central" },
+        { "name": "Division 3 East Central", "slug": "division-3-east-central" },
+        { "name": "Division 4 East Central", "slug": "division-4-east-central" },
+        { "name": "Division 5 East Central", "slug": "division-5-east-central" },
+        { "name": "Division 6 East Central", "slug": "division-6-east-central" }
+      ]
+    },
+    {
+      "name": "WRU North",
+      "slug": "wru-north",
+      "children": [
+        { "name": "Division 1 North", "slug": "division-1-north" },
+        { "name": "Division 2 North", "slug": "division-2-north" },
+        { "name": "Division 3 North East", "slug": "division-3-north-east" },
+        { "name": "Division 3 North West", "slug": "division-3-north-west" }
+      ]
+    },
+    {
+      "name": "WRU West Central",
+      "slug": "wru-west-central",
+      "children": [
+        { "name": "Division 1 West Central", "slug": "division-1-west-central" },
+        { "name": "Division 2 West Central", "slug": "division-2-west-central" },
+        { "name": "Division 3 West Central", "slug": "division-3-west-central" },
+        { "name": "Division 4 West Central", "slug": "division-4-west-central" },
+        { "name": "Division 5 West Central", "slug": "division-5-west-central" }
+      ]
+    },
+    {
+      "name": "WRU West",
+      "slug": "wru-west",
+      "children": [
+        { "name": "Division 1 West", "slug": "division-1-west" },
+        { "name": "Division 2 West", "slug": "division-2-west" },
+        { "name": "Division 3 West", "slug": "division-3-west" },
+        { "name": "Division 4 West A", "slug": "division-4-west-a" },
+        { "name": "Division 4 West B", "slug": "division-4-west-b" }
+      ]
+    },
+    {
+      "name": "WRU Division Cups",
+      "slug": "wru-division-cups",
+      "children": [
+        { "name": "Division 1 Cup", "slug": "division-1-cup" },
+        { "name": "Division 2 Cup", "slug": "division-2-cup" },
+        { "name": "Division 3 Cup", "slug": "division-3-cup" },
+        { "name": "Division 4 Cup", "slug": "division-4-cup" },
+        { "name": "Division 5 Cup", "slug": "division-5-cup" }
+      ]
+    },
+    {
+      "name": "Inter District Rugby",
+      "slug": "inter-district-rugby",
+      "children": [{ "name": "Inter District", "slug": "inter-district" }]
+    },
+    {
+      "name": "Dragons Region",
+      "slug": "dragons-region",
+      "children": [
+        { "name": "League", "slug": "league" },
+        { "name": "Dragons Cup", "slug": "dragons-cup" },
+        { "name": "Dragons Bowl", "slug": "dragons-bowl" },
+        { "name": "Dragons Plate", "slug": "dragons-plate" }
+      ]
+    },
+    {
+      "name": "East District",
+      "slug": "east-district",
+      "children": [
+        { "name": "Premier Division", "slug": "premier-division" },
+        { "name": "Division 1", "slug": "division-1" },
+        { "name": "Mallett Cup", "slug": "mallett-cup" },
+        { "name": "Malcolm Thomas Cup", "slug": "malcolm-thomas-cup" },
+        { "name": "Ninian Stuart Cup", "slug": "ninian-stuart-cup" },
+        { "name": "Ron Lucock Cup", "slug": "ron-lucock-cup" }
+      ]
+    },
+    {
+      "name": "Gwent Newport Pontypool",
+      "slug": "gwent-newport-pontypool",
+      "children": [
+        { "name": "Cyrus Davis Cup", "slug": "cyrus-davis-cup" },
+        { "name": "Ivor Jones Cup", "slug": "ivor-jones-cup" },
+        { "name": "Reg Buttress Shield", "slug": "reg-buttress-shield" }
+      ]
+    },
+    {
+      "name": "Llanelli District",
+      "slug": "llanelli-district",
+      "children": [
+        { "name": "Division A", "slug": "division-a" },
+        { "name": "Division B", "slug": "division-b" },
+        { "name": "AJT Recycling Cup", "slug": "ajt-recycling-cup" },
+        { "name": "AJT Recycling Plate", "slug": "ajt-recycling-plate" }
+      ]
+    },
+    {
+      "name": "Mid District",
+      "slug": "mid-district",
+      "children": [
+        { "name": "Blues", "slug": "blues" },
+        { "name": "Blacks", "slug": "blacks" },
+        { "name": "Premiership Cup", "slug": "premiership-cup" },
+        { "name": "Division 1 Cup", "slug": "division-1-cup" },
+        { "name": "Division 4 Cup", "slug": "division-4-cup" },
+        { "name": "Division 5 Cup", "slug": "division-5-cup" },
+        { "name": "Ivor Williams Cup", "slug": "ivor-williams-cup" },
+        { "name": "Mel Davies Cup", "slug": "mel-davies-cup" },
+        { "name": "Keith Jones Cup", "slug": "keith-jones-cup" }
+      ]
+    },
+    {
+      "name": "Mid Glamorgan",
+      "slug": "mid-glamorgan",
+      "children": [
+        { "name": "Silver Ball", "slug": "silver-ball" },
+        { "name": "East Ospreys League", "slug": "east-ospreys-league" },
+        { "name": "Central Glam Cup", "slug": "central-glam-cup" },
+        { "name": "Central Glam Trophy", "slug": "central-glam-trophy" },
+        { "name": "Enoch Lewis Cup", "slug": "enoch-lewis-cup" },
+        { "name": "Barrie Morris Plate", "slug": "barrie-morris-plate" }
+      ]
+    },
+    {
+      "name": "Monmouthshire",
+      "slug": "monmouthshire",
+      "children": [
+        { "name": "Ben Francis Cup", "slug": "ben-francis-cup" },
+        { "name": "Colin Tuckwell Bowl", "slug": "colin-tuckwell-bowl" },
+        { "name": "Bryn Meredith Shield", "slug": "bryn-meredith-shield" }
+      ]
+    },
+    {
+      "name": "North Wales",
+      "slug": "north-wales",
+      "children": [
+        { "name": "Division 1 Cup", "slug": "division-1-cup" },
+        { "name": "Division 2 Cup", "slug": "division-2-cup" },
+        { "name": "Division 3 NE Cup", "slug": "division-3-ne-cup" },
+        { "name": "Division 3 NW Cup", "slug": "division-3-nw-cup" }
+      ]
+    },
+    {
+      "name": "Pembrokeshire",
+      "slug": "pembrokeshire",
+      "children": [
+        { "name": "Cup", "slug": "cup" },
+        { "name": "Plate", "slug": "plate" }
+      ]
+    },
+    {
+      "name": "Swansea District",
+      "slug": "swansea-district",
+      "children": [
+        { "name": "Division A", "slug": "division-a" },
+        { "name": "Pool A", "slug": "pool-a" },
+        { "name": "Pool B", "slug": "pool-b" },
+        { "name": "Pool C", "slug": "pool-c" },
+        { "name": "Vaughan Sound Cup", "slug": "vaughan-sound-cup" }
+      ]
+    },
+    {
+      "name": "West Wales RU",
+      "slug": "west-wales-ru",
+      "children": [
+        { "name": "Cup", "slug": "cup" },
+        { "name": "Bowl", "slug": "bowl" },
+        { "name": "Plate", "slug": "plate" }
+      ]
+    }
+  ]
+}

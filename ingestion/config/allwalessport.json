@@ -4,6 +4,10 @@
   "requestTimeoutMs": 15000,
   "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   "rateLimitPerSecond": 2,
-  "maxCompetitions": 200,
-  "maxPagesPerCompetition": 20
+  "maxCompetitionsDiscovered": 500,
+  "maxCompetitionsScraped": 500,
+  "competitionNameAllowlist": [
+    "BUCS (Men)",
+    "BUCS (Women)"
+  ]
 }

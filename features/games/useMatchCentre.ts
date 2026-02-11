@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { teamLabel } from '../../lib/teamLabel';
+import { teamLabel, toTeamDisplayString } from '../../lib/teamLabel';
 import type { MatchCentre } from '../../types/games';
 
 type MatchCentreRow = {
@@ -48,8 +48,14 @@ const assertTeamLabel = (label: string, relation: unknown, side: 'home' | 'away'
 export function useMatchCentre(fixtureId: string | undefined): {
   matchCentre: MatchCentre | null;
   loading: boolean;
+  /** Alias for loading. */
+  isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  /** Future: timeline/events. Use useMatchEvents in screen for now. Not implemented here to avoid duplication. */
+  timelineEvents?: undefined;
+  /** Future: standings impact for this match. Not implemented; use when UI needs it. */
+  standingsImpact?: undefined;
 } {
   const [matchCentre, setMatchCentre] = useState<MatchCentre | null>(null);
   const [loading, setLoading] = useState(!!fixtureId);
@@ -91,8 +97,8 @@ export function useMatchCentre(fixtureId: string | undefined): {
       const match = row.matches?.[0];
       const homeTeam = normalizeRelation(row.home_team);
       const awayTeam = normalizeRelation(row.away_team);
-      const homeLabel = teamLabel(homeTeam);
-      const awayLabel = teamLabel(awayTeam);
+      const homeLabel = toTeamDisplayString(teamLabel(homeTeam));
+      const awayLabel = toTeamDisplayString(teamLabel(awayTeam));
       assertTeamLabel(homeLabel, row.home_team, 'home', row.id);
       assertTeamLabel(awayLabel, row.away_team, 'away', row.id);
       setMatchCentre({
@@ -152,5 +158,16 @@ export function useMatchCentre(fixtureId: string | undefined): {
     };
   }, [matchCentre?.match_id]);
 
-  return { matchCentre, loading, error, refetch: () => fetch(false) };
+  return {
+    matchCentre,
+    loading,
+    isLoading: loading,
+    error,
+    refetch: () => fetch(false),
+    timelineEvents: undefined,
+    standingsImpact: undefined,
+  };
 }
+
+// TODO(realtime): Event-level subscriptions only if UI requires them and events table is in use. Keep match row subscription as-is.
+// Caching: If added later, use read-through non-blocking cache; cache failures must not surface as fatal errors.

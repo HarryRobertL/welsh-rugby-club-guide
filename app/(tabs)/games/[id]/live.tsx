@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../../../features/auth/AuthContext';
 import { useRoleGate } from '../../../../features/auth/useRoleGate';
 import { useMatchCentre } from '../../../../features/games/useMatchCentre';
+import { teamLabel, toTeamDisplayString } from '../../../../lib/teamLabel';
 import { useMatchEvents } from '../../../../features/live/useMatchEvents';
 import { addLiveEvent, setMatchFullTime, undoLastEvent } from '../../../../services/live-events';
 import { sendMatchNotification } from '../../../../services/send-match-notifications';
@@ -44,7 +45,7 @@ export default function LiveConsoleScreen() {
   const { profile } = useAuth();
 
   const { matchCentre, loading: matchLoading, error: matchError, refetch: refetchMatch } = useMatchCentre(fixtureId);
-  const { events, loading, refetch: refetchEvents, connectionStatus } = useMatchEvents(matchId, {
+  const { events, loading, refetch: refetchEvents } = useMatchEvents(matchId, {
     onUpdate: refetchMatch,
   });
 
@@ -54,6 +55,11 @@ export default function LiveConsoleScreen() {
 
   const scoreHome = matchCentre?.score_home ?? 0;
   const scoreAway = matchCentre?.score_away ?? 0;
+
+  const displayHome = teamLabel(home_team_name);
+  const displayAway = teamLabel(away_team_name);
+  const homeLabel = displayHome === '—' ? 'Home' : displayHome;
+  const awayLabel = displayAway === '—' ? 'Away' : displayAway;
 
   const handleAddEvent = useCallback(
     async (eventType: LiveEventType) => {
@@ -78,8 +84,8 @@ export default function LiveConsoleScreen() {
             match_id: matchId,
             score_home: newHome,
             score_away: newAway,
-            home_team_name: home_team_name ?? undefined,
-            away_team_name: away_team_name ?? undefined,
+            home_team_name: toTeamDisplayString(home_team_name) || undefined,
+            away_team_name: toTeamDisplayString(away_team_name) || undefined,
           });
         }
       } catch (e) {
@@ -119,8 +125,8 @@ export default function LiveConsoleScreen() {
         match_id: matchId,
         score_home: scoreHome,
         score_away: scoreAway,
-        home_team_name: home_team_name ?? undefined,
-        away_team_name: away_team_name ?? undefined,
+        home_team_name: toTeamDisplayString(home_team_name) || undefined,
+        away_team_name: toTeamDisplayString(away_team_name) || undefined,
       });
       Alert.alert('Match ended', 'Full time.');
     } catch (e) {
@@ -168,9 +174,9 @@ export default function LiveConsoleScreen() {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
       {/* Score */}
       <View style={{ alignItems: 'center', marginBottom: 24, paddingVertical: 16, backgroundColor: '#f0f0f0', borderRadius: 8 }}>
-        <Text style={{ fontWeight: '600' }}>{home_team_name ?? 'Home'}</Text>
+        <Text style={{ fontWeight: '600' }}>{homeLabel}</Text>
         <Text style={{ fontSize: 28, fontWeight: '700' }}>{scoreHome} – {scoreAway}</Text>
-        <Text style={{ fontWeight: '600' }}>{away_team_name ?? 'Away'}</Text>
+        <Text style={{ fontWeight: '600' }}>{awayLabel}</Text>
       </View>
 
       {/* Team side + minute */}

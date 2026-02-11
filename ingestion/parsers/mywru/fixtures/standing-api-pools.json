@@ -1,0 +1,26 @@
+[
+  {
+    "leagueDetails": {
+      "competitionName": "WRU Men's National League",
+      "competitionInstanceId": 312,
+      "competitionPoolName": "Premiership",
+      "competitionPoolId": 2044,
+      "season": "2025/2026"
+    },
+    "standings": [
+      { "position": 1, "teamName": "Beddau RFC", "played": 15, "wins": 13, "losses": 2, "draws": 0, "pointsFor": 418, "pointsAgainst": 242, "totalPoints": 63 },
+      { "position": 2, "teamName": "Pontypridd RFC", "played": 15, "wins": 12, "losses": 3, "draws": 0, "pointsFor": 496, "pointsAgainst": 308, "totalPoints": 61 }
+    ]
+  },
+  {
+    "leagueDetails": {
+      "competitionName": "WRU Men's National League",
+      "competitionPoolName": "Championship",
+      "competitionPoolId": 2045,
+      "season": "2025/2026"
+    },
+    "standings": [
+      { "position": 1, "teamName": "Neath RFC", "played": 12, "wins": 8, "losses": 4, "draws": 0, "pointsFor": 385, "pointsAgainst": 273, "totalPoints": 43 }
+    ]
+  }
+]

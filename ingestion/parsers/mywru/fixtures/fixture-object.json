@@ -1,0 +1,20 @@
+{
+  "fixtures": [
+    {
+      "id": "obj-001",
+      "home_team": { "name": "Cardiff RFC" },
+      "away_team": { "organisationName": "Swansea RFC" },
+      "kickoff_at": "2026-02-20T19:30:00Z",
+      "status": "scheduled"
+    },
+    {
+      "id": "obj-002",
+      "homeTeam": { "teamName": "Newport RFC" },
+      "awayTeam": { "shortName": "Pontypridd RFC" },
+      "kickoff_at": "2026-02-21T19:30:00Z",
+      "status": "live",
+      "home_score": 7,
+      "away_score": 3
+    }
+  ]
+}

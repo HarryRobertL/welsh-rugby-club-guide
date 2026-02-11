@@ -6,9 +6,16 @@ import { Stack } from 'expo-router';
  */
 export default function CompetitionsLayout() {
   return (
-    <Stack screenOptions={{ headerShown: true, title: 'Competitions' }}>
-      <Stack.Screen name="index" options={{ title: 'Competitions' }} />
-      <Stack.Screen name="[id]" options={{ title: 'League table' }} />
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        header: () => null,
+        headerTransparent: true,
+        headerStyle: { height: 0, minHeight: 0, backgroundColor: 'transparent' },
+      }}
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
     </Stack>
   );
 }

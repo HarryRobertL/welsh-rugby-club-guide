@@ -1,59 +1,161 @@
+/**
+ * Match centre. Premium glass UI. Data from useMatchCentre only; lineups and events from existing hooks.
+ * File: app/(tabs)/games/[id]/index.tsx
+ */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
+  FlatList,
+  Pressable,
   ScrollView,
-  Text,
+  StyleSheet,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  Badge,
+  EmptyState,
+  GlassCard,
+  GlassHeader,
+  GlassHeaderButton,
+  Icon,
+  Skeleton,
+  Text,
+  useResolvedColors,
+} from '../../../../lib/ui';
 import { FavouriteButton } from '../../../../components/FavouriteButton';
 import { useMatchCentre } from '../../../../features/games/useMatchCentre';
 import { useMatchEvents } from '../../../../features/live/useMatchEvents';
 import { useMatchLineups } from '../../../../features/lineup/useMatchLineups';
 import { useAuth } from '../../../../features/auth/AuthContext';
-import { submitMatchDispute } from '../../../../services/disputes';
+import { teamLabel, toTeamDisplayString } from '../../../../lib/teamLabel';
+import { tokens } from '../../../../lib/theme';
+import type { MatchEventRow } from '../../../../types/live-events';
+import type { LineupRow } from '../../../../types/lineup';
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const HIT_SLOP = { top: 12, bottom: 12, left: 12, right: 12 };
+const MIN_TOUCH = 44;
+const LIVE_POLL_MS = 30000;
+
+function formatKoTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'scheduled':
-      return 'Scheduled';
-    case 'live':
-      return 'Live';
-    case 'full_time':
-      return 'Full time';
-    case 'postponed':
-      return 'Postponed';
-    case 'cancelled':
-      return 'Cancelled';
-    default:
-      return status;
-  }
+function eventTypeIcon(eventType: string): 'Football' | 'Shield' | 'Refresh' | 'ChevronRight' {
+  const t = eventType.toLowerCase();
+  if (t === 'try' || t === 'conversion' || t === 'penalty_goal' || t === 'penalty_try' || t === 'drop_goal') return 'Football';
+  if (t === 'yellow_card' || t === 'red_card') return 'Shield';
+  if (t.includes('substitut')) return 'Refresh';
+  return 'ChevronRight';
 }
 
-/**
- * Match centre. Score, status, timeline placeholder, team sheets (with club admin build link), venue info.
- */
+function eventTypeLabel(eventType: string): string {
+  return eventType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+const TimelineEventRow = React.memo(function TimelineEventRow({ ev }: { ev: MatchEventRow }) {
+  const colors = useResolvedColors();
+  const iconName = eventTypeIcon(ev.event_type);
+  const teamSide = ev.payload?.team_side ?? null;
+  const accessibilityLabel = `${ev.minute != null ? `${ev.minute}'` : '—'} ${eventTypeLabel(ev.event_type)}${teamSide ? ` (${teamSide})` : ''}`;
+  return (
+    <View style={styles.timelineRow} accessibilityLabel={accessibilityLabel} accessibilityRole="text">
+      <Text variant="caption" color="textSecondary" style={styles.timelineMinute}>
+        {ev.minute != null ? `${ev.minute}'` : '—'}
+      </Text>
+      <Icon name={iconName} size={18} color={colors.primary} />
+      <Text variant="body" color="text" numberOfLines={1} style={styles.timelineLabel}>
+        {eventTypeLabel(ev.event_type)}
+      </Text>
+      {teamSide ? (
+        <Badge label={teamSide} variant="neutral" />
+      ) : null}
+    </View>
+  );
+});
+
+function LineupAccordion({
+  title,
+  rows,
+  defaultExpanded,
+}: {
+  title: string;
+  rows: LineupRow[];
+  defaultExpanded: boolean;
+}) {
+  const colors = useResolvedColors();
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const starters = useMemo(() => rows.filter((r) => r.shirt_number <= 15), [rows]);
+  const bench = useMemo(() => rows.filter((r) => r.shirt_number > 15), [rows]);
+  const isEmpty = rows.length === 0;
+
+  return (
+    <View style={styles.accordionSection}>
+      <Pressable
+        onPress={() => setExpanded((e) => !e)}
+        style={styles.accordionHeader}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`${title}, ${expanded ? 'collapse' : 'expand'}`}
+        hitSlop={HIT_SLOP}
+      >
+        <Text variant="bodyBold" color="text">{title}</Text>
+        <View style={{ transform: [{ rotate: expanded ? '90deg' : '0deg' }] }}>
+          <Icon name="ChevronRight" size={20} color={colors.textMuted} />
+        </View>
+      </Pressable>
+      {expanded && !isEmpty && (
+        <View style={styles.accordionBody}>
+          {starters.length > 0 && (
+            <View style={styles.lineupBlock}>
+              <Text variant="caption" color="textSecondary" style={styles.lineupBlockTitle}>Starters</Text>
+              {starters.map((row) => (
+                <View key={`s-${row.shirt_number}`} style={styles.lineupRow}>
+                  <Text variant="body" color="text" style={styles.shirtNumber}>{row.shirt_number}</Text>
+                  <Text variant="body" color="text" numberOfLines={1} style={styles.playerName}>{row.player_name || '—'}</Text>
+                  <Text variant="caption" color="textMuted">{row.position || ''}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {bench.length > 0 && (
+            <View style={styles.lineupBlock}>
+              <Text variant="caption" color="textSecondary" style={styles.lineupBlockTitle}>Bench</Text>
+              {bench.map((row) => (
+                <View key={`b-${row.shirt_number}`} style={styles.lineupRow}>
+                  <Text variant="body" color="text" style={styles.shirtNumber}>{row.shirt_number}</Text>
+                  <Text variant="body" color="text" numberOfLines={1} style={styles.playerName}>{row.player_name || '—'}</Text>
+                  <Text variant="caption" color="textMuted">{row.position || ''}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
+      {expanded && isEmpty && (
+        <Text variant="caption" color="textMuted" style={styles.accordionEmpty}>No lineup published</Text>
+      )}
+    </View>
+  );
+}
+
+type TabId = 'timeline' | 'lineups' | 'table';
+
 export default function MatchCentreScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const colors = useResolvedColors();
   const { matchCentre, loading, error, refetch } = useMatchCentre(id);
-  const { events, connectionStatus } = useMatchEvents(matchCentre?.match_id ?? undefined, {
-    onUpdate: refetch,
-  });
+  const { events, connectionStatus } = useMatchEvents(matchCentre?.match_id ?? undefined, { onUpdate: refetch });
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    pollRef.current = setInterval(() => refetch(), LIVE_POLL_MS);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = null;
+    };
+  }, [refetch]);
   const { profile } = useAuth();
   const isClubAdmin = profile?.role === 'club_admin';
   const clubId = profile?.club_id ?? null;
@@ -70,12 +172,15 @@ export default function MatchCentreScreen() {
     { publishedOnly: true }
   );
 
+  const [activeTab, setActiveTab] = useState<TabId>('timeline');
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+
   const handleSubmitDispute = useCallback(async () => {
     if (!matchCentre?.match_id || !profile?.id) return;
     setDisputeSubmitting(true);
     try {
+      const { submitMatchDispute } = await import('../../../../services/disputes');
       const { error: err } = await submitMatchDispute(matchCentre.match_id, profile.id, disputeReason);
       if (err) throw err;
       setDisputeReason('');
@@ -87,264 +192,394 @@ export default function MatchCentreScreen() {
     }
   }, [matchCentre?.match_id, profile?.id, disputeReason]);
 
+  const hasMatchId = !!matchCentre?.match_id;
+  const lineupsLoading = homeLineupLoading || awayLineupLoading;
+  const hasPublishedLineups = homeLineupRows.length > 0 || awayLineupRows.length > 0;
+  const tableDataExists = false; // useMatchCentre does not expose table/standings
+
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 12 }}>Loading match…</Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassHeader
+          leftSlot={
+            <GlassHeaderButton accessibilityLabel="Go back" onPress={() => router.back()}>
+              <Icon name="ArrowBack" size={24} color={colors.text} />
+            </GlassHeaderButton>
+          }
+          titleSlot={<Text variant="bodyBold" color="text">Match</Text>}
+        />
+        <View style={styles.loadingContent}>
+          <Skeleton variant="block" width={320} height={200} style={styles.heroSkeleton} />
+          <Skeleton variant="line" style={styles.tabSkeleton} />
+          <Skeleton variant="line" style={styles.tabSkeleton} />
+        </View>
       </View>
     );
   }
 
-  if (error || !matchCentre) {
+  if (error && !matchCentre) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: '#c00', textAlign: 'center', marginBottom: 12 }}>
-          {error ?? 'Match not found'}
-        </Text>
-        <TouchableOpacity onPress={refetch} style={{ padding: 12, backgroundColor: '#eee' }}>
-          <Text>Retry</Text>
-        </TouchableOpacity>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassHeader
+          leftSlot={
+            <GlassHeaderButton accessibilityLabel="Go back" onPress={() => router.back()}>
+              <Icon name="ArrowBack" size={24} color={colors.text} />
+            </GlassHeaderButton>
+          }
+          titleSlot={<Text variant="bodyBold" color="text">Match</Text>}
+        />
+        <View style={styles.errorContent}>
+          <EmptyState
+            title="Something went wrong"
+            description={error}
+            primaryAction={{ label: 'Retry', onPress: refetch }}
+            mode="error"
+          />
+        </View>
       </View>
     );
+  }
+
+  if (!matchCentre) {
+    return null;
   }
 
   const m = matchCentre;
-  const hasMatchId = !!m.match_id;
-  const lineupsLoading = homeLineupLoading || awayLineupLoading;
-  const hasPublishedLineups = homeLineupRows.length > 0 || awayLineupRows.length > 0;
+  const statusLabel = m.status === 'live' ? 'LIVE' : m.status === 'full_time' ? 'FT' : `KO ${formatKoTime(m.scheduled_at)}`;
+  const statusVariant = m.status === 'live' ? 'live' : m.status === 'full_time' ? 'ft' : 'scheduled';
 
-  const renderLineupBlock = (title: string, rows: typeof homeLineupRows) => {
-    const starters = rows.filter((r) => r.shirt_number <= 15);
-    const bench = rows.filter((r) => r.shirt_number > 15);
-    return (
-      <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6 }}>{title}</Text>
-        {rows.length === 0 ? (
-          <Text style={{ fontSize: 12, color: '#666' }}>No lineup published</Text>
-        ) : (
-          <View style={{ gap: 6 }}>
-            {starters.length > 0 && (
-              <View>
-                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Starters</Text>
-                {starters.map((row) => (
-                  <View key={`${title}-s-${row.shirt_number}`} style={{ flexDirection: 'row', gap: 8 }}>
-                    <Text style={{ width: 28, fontWeight: '600' }}>{row.shirt_number}</Text>
-                    <Text style={{ flex: 1 }}>{row.player_name || '—'}</Text>
-                    <Text style={{ color: '#666' }}>{row.position || ''}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            {bench.length > 0 && (
-              <View style={{ marginTop: 6 }}>
-                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Bench</Text>
-                {bench.map((row) => (
-                  <View key={`${title}-b-${row.shirt_number}`} style={{ flexDirection: 'row', gap: 8 }}>
-                    <Text style={{ width: 28, fontWeight: '600' }}>{row.shirt_number}</Text>
-                    <Text style={{ flex: 1 }}>{row.player_name || '—'}</Text>
-                    <Text style={{ color: '#666' }}>{row.position || ''}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-    );
-  };
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'timeline', label: 'Timeline' },
+    { id: 'lineups', label: 'Lineups' },
+    { id: 'table', label: 'Table' },
+  ];
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      {/* Score & status + favourite */}
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', marginBottom: 24 }}>
-        <View style={{ flex: 1, alignItems: 'center', paddingVertical: 16, backgroundColor: '#f8f8f8', borderRadius: 8 }}>
-          <Text style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>{statusLabel(m.status)}</Text>
-          <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>{formatDate(m.scheduled_at)}</Text>
-          <Text style={{ fontWeight: '600', fontSize: 16, marginBottom: 4 }}>{m.home_team_name}</Text>
-          <Text style={{ fontSize: 28, fontWeight: '700' }}>
-            {m.score_home} – {m.score_away}
-          </Text>
-          <Text style={{ fontWeight: '600', fontSize: 16, marginTop: 4 }}>{m.away_team_name}</Text>
-        </View>
-        <View style={{ position: 'absolute', top: 16, right: 16 }}>
-          <FavouriteButton entityType="fixture" entityId={m.fixture_id} size={24} />
-        </View>
-      </View>
-
-      {/* Live status when match has started */}
-      {hasMatchId && (
-        <View style={{ marginBottom: 16, alignItems: 'center' }}>
-          <Text style={{ fontSize: 12, color: '#666' }}>
-            {connectionStatus === 'realtime'
-              ? 'Live'
-              : connectionStatus === 'polling'
-                ? 'Updating every 10s'
-                : connectionStatus === 'connecting'
-                  ? 'Connecting…'
-                  : null}
-          </Text>
-        </View>
-      )}
-
-      {/* Venue info */}
-      <View style={{ marginBottom: 24 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Venue</Text>
-        <View style={{ padding: 12, backgroundColor: '#f8f8f8', borderRadius: 8 }}>
-          <Text style={{ fontWeight: '600' }}>{m.venue_name ?? '—'}</Text>
-          {m.venue_address ? (
-            <Text style={{ fontSize: 14, color: '#666', marginTop: 4 }}>{m.venue_address}</Text>
-          ) : null}
-        </View>
-      </View>
-
-      {/* Timeline (live from match_events) */}
-      <View style={{ marginBottom: 24 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Timeline</Text>
-        {!hasMatchId ? (
-          <View style={{ padding: 24, backgroundColor: '#f0f0f0', borderRadius: 8, alignItems: 'center' }}>
-            <Text style={{ color: '#666' }}>Events appear when match is live</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <GlassHeader
+        leftSlot={
+          <GlassHeaderButton accessibilityLabel="Go back" onPress={() => router.back()}>
+            <Icon name="ArrowBack" size={24} color={colors.text} />
+          </GlassHeaderButton>
+        }
+        titleSlot={<Text variant="bodyBold" color="text">Match</Text>}
+        rightSlot={
+          <View style={styles.headerActions}>
+            <View style={styles.favWrap}>
+              <FavouriteButton entityType="fixture" entityId={m.fixture_id} size={22} />
+            </View>
+            <GlassHeaderButton accessibilityLabel="Share match" onPress={() => {}}>
+              <Icon name="Users" size={22} color={colors.text} />
+            </GlassHeaderButton>
+            <GlassHeaderButton accessibilityLabel="Notifications" onPress={() => {}}>
+              <Icon name="Bell" size={22} color={colors.text} />
+            </GlassHeaderButton>
           </View>
-        ) : events.length === 0 ? (
-          <View style={{ padding: 24, backgroundColor: '#f0f0f0', borderRadius: 8, alignItems: 'center' }}>
-            <Text style={{ color: '#666' }}>No events yet</Text>
-          </View>
-        ) : (
-          <View style={{ padding: 12, backgroundColor: '#f8f8f8', borderRadius: 8, gap: 8 }}>
-            {events.map((ev) => (
-              <View key={ev.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ fontSize: 12, color: '#666', minWidth: 32 }}>
-                  {ev.minute != null ? `${ev.minute}'` : '—'}
-                </Text>
-                <Text style={{ fontWeight: '600', textTransform: 'capitalize' }}>{ev.event_type.replace('_', ' ')}</Text>
-                {ev.payload?.team_side ? (
-                  <Text style={{ fontSize: 14, color: '#666' }}>({ev.payload.team_side})</Text>
-                ) : null}
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
+        }
+      />
 
-      {/* Team sheets: view / build (club admin) */}
-      <View style={{ marginBottom: 24 }}>
-        <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Team sheets</Text>
-        {!hasMatchId ? (
-          <View style={{ padding: 24, backgroundColor: '#f0f0f0', borderRadius: 8, alignItems: 'center' }}>
-            <Text style={{ color: '#666' }}>Team sheet available once match is created</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {error ? (
+          <Pressable
+            style={[styles.inlineError, { backgroundColor: colors.error }]}
+            onPress={refetch}
+            accessibilityRole="button"
+            accessibilityLabel="Live updates paused. Tap to retry."
+          >
+            <Text variant="caption" color="primaryContrast">Live updates paused. Tap to retry.</Text>
+          </Pressable>
+        ) : null}
+        {/* Hero scoreboard */}
+        <GlassCard variant="card" style={styles.heroCard}>
+          <View style={styles.heroTeamsRow}>
+            <View style={styles.heroTeamBlock}>
+              <View style={styles.crestPlaceholder} />
+              <Text variant="h3" color="text" style={styles.heroTeamName} numberOfLines={1}>
+                {teamLabel(m.home_team_name)}
+              </Text>
+            </View>
+            <Text variant="h1" color="text" style={styles.heroScore}>
+              {m.score_home} – {m.score_away}
+            </Text>
+            <View style={styles.heroTeamBlock}>
+              <View style={styles.crestPlaceholder} />
+              <Text variant="h3" color="text" style={styles.heroTeamName} numberOfLines={1}>
+                {teamLabel(m.away_team_name)}
+              </Text>
+            </View>
           </View>
-        ) : (
-          <View style={{ gap: 8 }}>
-            {canBuildHome && m.match_id && (
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: `/(tabs)/games/${id}/lineup`,
-                    params: { teamId: m.home_team_id, teamName: m.home_team_name, matchId: m.match_id },
-                  })
-                }
-                style={{ padding: 14, backgroundColor: '#eee', borderRadius: 8 }}
+          <View style={styles.statusRow}>
+            <Badge label={statusLabel} variant={statusVariant} />
+          </View>
+          {(m.venue_name || m.venue_address) && (
+            <View style={styles.venueRow}>
+            <Icon name="MapPin" size={16} color={colors.textSecondary} />
+            <Text variant="caption" color="textSecondary" numberOfLines={1} style={styles.venueText}>
+              {m.venue_name ?? ''}{m.venue_address ? ` · ${m.venue_address}` : ''}
+            </Text>
+          </View>
+          )}
+          <View style={styles.competitionRow}>
+            <Badge label="Match" variant="neutral" />
+          </View>
+        </GlassCard>
+
+        {/* Tabs */}
+        <View style={styles.tabBar}>
+          {tabs.map((tab) => (
+            <Pressable
+              key={tab.id}
+              onPress={() => setActiveTab(tab.id)}
+              style={[styles.tab, activeTab === tab.id && [styles.tabActive, { borderBottomColor: colors.primary }]]}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === tab.id }}
+              accessibilityLabel={tab.label}
+              hitSlop={HIT_SLOP}
+            >
+              <Text
+                variant="bodyBold"
+                color={activeTab === tab.id ? 'primary' : 'textSecondary'}
               >
-                <Text style={{ fontWeight: '600' }}>Build team sheet — {m.home_team_name}</Text>
-              </TouchableOpacity>
-            )}
-            {canBuildAway && m.match_id && (
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: `/(tabs)/games/${id}/lineup`,
-                    params: { teamId: m.away_team_id, teamName: m.away_team_name, matchId: m.match_id },
-                  })
-                }
-                style={{ padding: 14, backgroundColor: '#eee', borderRadius: 8 }}
-              >
-                <Text style={{ fontWeight: '600' }}>Build team sheet — {m.away_team_name}</Text>
-              </TouchableOpacity>
-            )}
-            {lineupsLoading ? (
-              <View style={{ padding: 16, alignItems: 'center' }}>
-                <ActivityIndicator />
-              </View>
-            ) : hasPublishedLineups ? (
-              <View style={{ padding: 12, backgroundColor: '#f8f8f8', borderRadius: 8 }}>
-                {renderLineupBlock(m.home_team_name, homeLineupRows)}
-                {renderLineupBlock(m.away_team_name, awayLineupRows)}
-              </View>
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Tab content */}
+        {activeTab === 'timeline' && (
+          <View style={styles.tabPanel}>
+            {!hasMatchId ? (
+              <EmptyState
+                title="No events yet"
+                description="Events appear when the match is live. Check back soon."
+                primaryAction={{ label: 'Refresh', onPress: refetch }}
+              />
+            ) : events.length === 0 ? (
+              <EmptyState
+                title="No events yet"
+                description="Check back soon for live updates."
+                primaryAction={{ label: 'Refresh', onPress: refetch }}
+              />
             ) : (
-              <View style={{ padding: 24, backgroundColor: '#f0f0f0', borderRadius: 8, alignItems: 'center' }}>
-                <Text style={{ color: '#666' }}>No team sheets published yet</Text>
+              <GlassCard variant="card" style={styles.eventsCard}>
+                <FlatList
+                  data={events}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  renderItem={({ item }) => <TimelineEventRow ev={item} />}
+                  ItemSeparatorComponent={() => <View style={styles.timelineDivider} />}
+                />
+              </GlassCard>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'lineups' && (
+          <View style={styles.tabPanel}>
+            {!hasMatchId ? (
+              <EmptyState
+                title="Lineups not available"
+                description="Team sheets appear once the match is created."
+                primaryAction={{ label: 'Refresh', onPress: refetch }}
+              />
+            ) : lineupsLoading ? (
+              <View style={styles.lineupLoading}>
+                <Skeleton variant="line" style={styles.upcomingSkeleton} />
+                <Skeleton variant="line" style={styles.upcomingSkeleton} />
+                <Skeleton variant="line" style={styles.upcomingSkeleton} />
+              </View>
+            ) : !hasPublishedLineups ? (
+              <EmptyState
+                title="No lineups published"
+                description="Team sheets will appear here when published."
+                primaryAction={{ label: 'Refresh', onPress: refetch }}
+              />
+            ) : (
+              <View style={styles.accordionList}>
+                <LineupAccordion title={teamLabel(m.home_team_name)} rows={homeLineupRows} defaultExpanded={true} />
+                <LineupAccordion title={teamLabel(m.away_team_name)} rows={awayLineupRows} defaultExpanded={true} />
+              </View>
+            )}
+            {(canBuildHome || canBuildAway) && m.match_id && (
+              <View style={styles.buildRow}>
+                {canBuildHome && (
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: `/(tabs)/games/${id}/lineup`,
+                        params: { teamId: m.home_team_id, teamName: toTeamDisplayString(m.home_team_name), matchId: m.match_id },
+                      })
+                    }
+                    style={styles.buildBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Build team sheet for ${teamLabel(m.home_team_name)}`}
+                  >
+                    <Text variant="bodyBold" color="primaryContrast">Build — {teamLabel(m.home_team_name)}</Text>
+                  </Pressable>
+                )}
+                {canBuildAway && (
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: `/(tabs)/games/${id}/lineup`,
+                        params: { teamId: m.away_team_id, teamName: toTeamDisplayString(m.away_team_name), matchId: m.match_id },
+                      })
+                    }
+                    style={styles.buildBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Build team sheet for ${teamLabel(m.away_team_name)}`}
+                  >
+                    <Text variant="bodyBold" color="primaryContrast">Build — {teamLabel(m.away_team_name)}</Text>
+                  </Pressable>
+                )}
               </View>
             )}
           </View>
         )}
-      </View>
 
-      {/* Live console (club admin only) */}
-      {hasMatchId && m.match_id && (canBuildHome || canBuildAway) && (
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Live console</Text>
-          <TouchableOpacity
+        {activeTab === 'table' && (
+          <View style={styles.tabPanel}>
+            {!tableDataExists ? (
+              <EmptyState
+                title="Table not available yet"
+                description="Standings for this competition will appear here when available."
+                primaryAction={{ label: 'Refresh', onPress: refetch }}
+              />
+            ) : (
+              <GlassCard variant="card">
+                <Text variant="body" color="textSecondary">Table content</Text>
+              </GlassCard>
+            )}
+          </View>
+        )}
+
+        {/* Live status */}
+        {hasMatchId && connectionStatus !== 'off' && (
+          <Text variant="micro" color="textMuted" style={styles.liveStatus}>
+            {connectionStatus === 'realtime' ? 'Live' : connectionStatus === 'polling' ? 'Updating every 10s' : 'Connecting…'}
+          </Text>
+        )}
+
+        {/* Live console (club admin) */}
+        {hasMatchId && m.match_id && (canBuildHome || canBuildAway) && (
+          <Pressable
             onPress={() =>
               router.push({
                 pathname: `/(tabs)/games/${id}/live`,
                 params: {
                   matchId: m.match_id,
-                  home_team_name: m.home_team_name,
-                  away_team_name: m.away_team_name,
+                  home_team_name: toTeamDisplayString(m.home_team_name),
+                  away_team_name: toTeamDisplayString(m.away_team_name),
                   score_home: String(m.score_home),
                   score_away: String(m.score_away),
                 },
               })
             }
-            style={{ padding: 14, backgroundColor: '#333', borderRadius: 8 }}
+            style={[styles.liveConsoleBtn, { backgroundColor: colors.primary }]}
+            accessibilityRole="button"
+            accessibilityLabel="Open live console"
           >
-            <Text style={{ color: '#fff', fontWeight: '600' }}>Open live console</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+            <Text variant="bodyBold" color="primaryContrast">Open live console</Text>
+          </Pressable>
+        )}
 
-      {/* Dispute submission (authenticated; match has started) */}
-      {hasMatchId && m.match_id && profile && (
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Report a problem</Text>
-          <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-            Wrong score or result? Submit a dispute for review. No moderation logic yet.
-          </Text>
-          <TextInput
-            placeholder="Describe the issue (e.g. wrong score, incorrect result)"
-            value={disputeReason}
-            onChangeText={setDisputeReason}
-            multiline
-            numberOfLines={3}
-            style={{
-              borderWidth: 1,
-              borderColor: '#ddd',
-              borderRadius: 8,
-              padding: 12,
-              minHeight: 80,
-              textAlignVertical: 'top',
-              marginBottom: 8,
-            }}
-            editable={!disputeSubmitting}
-          />
-          <TouchableOpacity
-            onPress={handleSubmitDispute}
-            disabled={disputeSubmitting || !disputeReason.trim()}
-            style={{
-              padding: 14,
-              backgroundColor: disputeReason.trim() && !disputeSubmitting ? '#333' : '#ccc',
-              borderRadius: 8,
-              alignItems: 'center',
-            }}
-          >
-            {disputeSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={{ color: '#fff', fontWeight: '600' }}>Submit dispute</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+        {/* Dispute */}
+        {hasMatchId && m.match_id && profile && (
+          <View style={styles.disputeSection}>
+            <Text variant="bodyBold" color="text" style={styles.disputeTitle}>Report a problem</Text>
+            <Text variant="caption" color="textSecondary" style={styles.disputeHint}>
+              Wrong score or result? Submit a dispute for review.
+            </Text>
+            <TextInput
+              placeholder="Describe the issue (e.g. wrong score, incorrect result)"
+              placeholderTextColor={colors.textMuted}
+              value={disputeReason}
+              onChangeText={setDisputeReason}
+              multiline
+              numberOfLines={3}
+              style={[styles.disputeInput, { borderColor: colors.border, color: colors.text }]}
+              editable={!disputeSubmitting}
+            />
+            <Pressable
+              onPress={handleSubmitDispute}
+              disabled={disputeSubmitting || !disputeReason.trim()}
+              style={[
+                styles.disputeSubmit,
+                { backgroundColor: disputeReason.trim() && !disputeSubmitting ? colors.primary : colors.surfaceMuted },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Submit dispute"
+            >
+              {disputeSubmitting ? (
+                <Text variant="body" color="textMuted">Submitting…</Text>
+              ) : (
+                <Text variant="bodyBold" color="primaryContrast">Submit dispute</Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+
+        <View style={styles.footer} />
+      </ScrollView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: tokens.spacing.xxl },
+  loadingContent: { padding: tokens.spacing.lg },
+  heroSkeleton: { marginBottom: tokens.spacing.lg },
+  tabSkeleton: { marginBottom: tokens.spacing.sm, height: 32 },
+  errorContent: { flex: 1, padding: tokens.spacing.xl, justifyContent: 'center' },
+  inlineError: { padding: tokens.spacing.md, marginHorizontal: tokens.spacing.lg, marginTop: tokens.spacing.sm, borderRadius: tokens.radius.md },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.sm },
+  favWrap: { minHeight: MIN_TOUCH, minWidth: MIN_TOUCH, justifyContent: 'center' },
+  heroCard: { marginHorizontal: tokens.spacing.lg, marginTop: tokens.spacing.md },
+  heroTeamsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroTeamBlock: { flex: 1, alignItems: 'center', minWidth: 0 },
+  crestPlaceholder: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: tokens.spacing.xs },
+  heroTeamName: { textAlign: 'center', marginVertical: tokens.spacing.xs },
+  heroScore: { marginHorizontal: tokens.spacing.md },
+  statusRow: { marginTop: tokens.spacing.md, alignItems: 'center' },
+  venueRow: { flexDirection: 'row', alignItems: 'center', marginTop: tokens.spacing.sm, gap: tokens.spacing.xs },
+  venueText: { flex: 1 },
+  competitionRow: { marginTop: tokens.spacing.sm },
+  tabBar: { flexDirection: 'row', marginTop: tokens.spacing.xl, paddingHorizontal: tokens.spacing.lg, gap: tokens.spacing.xs },
+  tab: { paddingVertical: tokens.spacing.sm, paddingHorizontal: tokens.spacing.md, minHeight: MIN_TOUCH, justifyContent: 'center' },
+  tabActive: { borderBottomWidth: 2 },
+  tabPanel: { paddingHorizontal: tokens.spacing.lg, marginTop: tokens.spacing.lg },
+  eventsCard: { padding: tokens.spacing.md },
+  timelineRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.sm, minHeight: MIN_TOUCH },
+  timelineMinute: { minWidth: 32 },
+  timelineLabel: { flex: 1 },
+  timelineDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: tokens.spacing.xs },
+  accordionList: { gap: tokens.spacing.md },
+  accordionSection: { marginBottom: tokens.spacing.sm },
+  accordionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: tokens.spacing.md, paddingHorizontal: tokens.spacing.lg, minHeight: MIN_TOUCH, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: tokens.radius.md },
+  accordionBody: { paddingHorizontal: tokens.spacing.lg, paddingBottom: tokens.spacing.md },
+  accordionEmpty: { paddingHorizontal: tokens.spacing.lg, paddingBottom: tokens.spacing.sm },
+  lineupBlock: { marginTop: tokens.spacing.sm },
+  lineupBlockTitle: { marginBottom: tokens.spacing.xs },
+  lineupRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.md, paddingVertical: tokens.spacing.xs },
+  shirtNumber: { width: 28, fontWeight: '600' },
+  playerName: { flex: 1 },
+  lineupLoading: { gap: tokens.spacing.sm },
+  upcomingSkeleton: { marginBottom: tokens.spacing.sm },
+  buildRow: { flexDirection: 'row', gap: tokens.spacing.sm, marginTop: tokens.spacing.lg, flexWrap: 'wrap' },
+  buildBtn: { paddingVertical: tokens.spacing.md, paddingHorizontal: tokens.spacing.lg, borderRadius: tokens.radius.md },
+  liveStatus: { textAlign: 'center', marginTop: tokens.spacing.md },
+  liveConsoleBtn: { marginHorizontal: tokens.spacing.lg, marginTop: tokens.spacing.lg, paddingVertical: tokens.spacing.md, borderRadius: tokens.radius.md, alignItems: 'center' },
+  disputeSection: { marginHorizontal: tokens.spacing.lg, marginTop: tokens.spacing.xxl },
+  disputeTitle: { marginBottom: tokens.spacing.xs },
+  disputeHint: { marginBottom: tokens.spacing.sm },
+  disputeInput: { minHeight: 80, borderWidth: 1, borderRadius: tokens.radius.md, padding: tokens.spacing.md, marginBottom: tokens.spacing.sm, textAlignVertical: 'top' },
+  disputeSubmit: { paddingVertical: tokens.spacing.md, borderRadius: tokens.radius.md, alignItems: 'center' },
+  footer: { height: tokens.spacing.xxl },
+});

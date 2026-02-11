@@ -6,9 +6,9 @@ import { Stack } from 'expo-router';
  */
 export default function GamesLayout() {
   return (
-    <Stack screenOptions={{ headerShown: true, title: 'Games' }}>
-      <Stack.Screen name="index" options={{ title: 'Fixtures' }} />
-      <Stack.Screen name="[id]" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="[id]" />
     </Stack>
   );
 }

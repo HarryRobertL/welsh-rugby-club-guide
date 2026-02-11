@@ -1,22 +1,10 @@
 {
   "baseUrl": "https://my.wru.wales",
-  "groupsApiBaseUrl": null,
-  "_comment_groupsApiBaseUrl": "Set to a JSON API base URL (e.g. from WRU or browser network tab) to discover groups; leave null to use baseUrl (my.wru.wales returns HTML for /groups).",
-  "roots": [
-    {
-      "type": "competitionInstance",
-      "id": 312,
-      "label": "WRU Mens Admiral National Leagues"
-    },
-    { "type": "competitionInstance", "id": 652, "label": "Competition 652" },
-    { "type": "competitionInstance", "id": 654, "label": "Competition 654" },
-    { "type": "competitionInstance", "id": 655, "label": "Competition 655" },
-    { "type": "competitionInstance", "id": 656, "label": "Competition 656" },
-    { "type": "competitionInstance", "id": 657, "label": "Competition 657" },
-    { "type": "competitionInstance", "id": 658, "label": "Competition 658" },
-    { "type": "competitionInstance", "id": 660, "label": "Competition 660" }
-  ],
-  "_comment_roots": "To add more competition families, append objects to roots with type: competitionInstance, id (from MyWRU), and label.",
+  "groupsApiBaseUrl": "https://api.wru.wales",
+  "_comment_groupsApiBaseUrl": "JSON API base URL for WRU fixtures/results endpoints. Required for competition group discovery and polling.",
+  "roots": [],
+  "useActiveCompetitions": true,
+  "_comment_roots": "Optional override. Leave empty to pull active competitions from WRU API.",
   "_comment_groups": "Discovery calls /competition/{id}/groups and /overview; my.wru.wales currently returns an HTML shell (SPA). Groups/endpoints will populate when a JSON API URL is available (e.g. from WRU or browser network tab).",
   "_comment_families": "Labels 652–660 can be updated when names are confirmed (e.g. Womens Admiral, Super Rygbi Cymru, Youth, Age Grade, Knockout).",
   "knownCompetitionOverviewUrls": [

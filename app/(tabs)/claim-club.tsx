@@ -9,7 +9,7 @@ type ClubRow = { id: string; name: string; slug: string };
 type PendingClaimRow = { id: string; club_id: string; status: string; created_at: string };
 
 /**
- * Club claim screen (club_admin only). Select a club and attach to profile (users.club_id).
+ * Club claim screen. Select a club and attach to profile (users.club_id) with approval flow.
  * File: app/(tabs)/claim-club.tsx — route /claim-club.
  */
 export default function ClaimClubScreen() {
@@ -82,7 +82,7 @@ export default function ClaimClubScreen() {
   const allowedDomains = useMemo(() => {
     return (process.env.EXPO_PUBLIC_CLAIM_CLUB_ALLOWLIST ?? '')
       .split(',')
-      .map((v) => v.trim().toLowerCase())
+      .map((v: string) => v.trim().toLowerCase())
       .filter(Boolean);
   }, []);
   const emailDomain = useMemo(() => {

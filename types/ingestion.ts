@@ -13,17 +13,20 @@ export type IngestEntityType =
   | 'result'
   | 'form_table';
 
-/** Config for AllWalesSport ingestion source. */
+/** Config for AllWalesSport ingestion source. Allowlist: only these competitions are discovered and persisted. */
 export type AllWalesSportConfig = {
   baseUrl: string;
   sportPath: string;
   startCompetitionCid?: number;
+  /** CIDs and/or exact names (e.g. BUCS). When set, only allowlisted competitions are ingested. */
   competitionCidAllowlist?: number[];
+  /** Exact names to allow (e.g. "BUCS Super Rugby"). Merged with env ALLWALESSPORT_ALLOWLIST. */
+  competitionNameAllowlist?: string[];
   requestTimeoutMs: number;
   userAgent: string;
   rateLimitPerSecond: number;
-  maxCompetitions: number;
-  maxPagesPerCompetition: number;
+  maxCompetitionsDiscovered: number;
+  maxCompetitionsScraped: number;
 };
 
 export type IngestJobStatus = 'pending' | 'running' | 'completed' | 'failed';

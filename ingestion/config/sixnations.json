@@ -1,0 +1,7 @@
+{
+  "baseUrl": "https://oval.sixnationsrugby.com",
+  "requestTimeoutMs": 15000,
+  "competitions": [
+    { "compId": 1055, "name": "Six Nations", "seasonIds": ["202500", "202600"] }
+  ]
+}

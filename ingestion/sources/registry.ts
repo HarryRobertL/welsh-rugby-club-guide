@@ -11,8 +11,11 @@ export type SourceDescriptor = {
   name: string;
   /** Entity types this source can produce in ingest_items. */
   entityTypes: IngestEntityType[];
-  /** Run discovery/ingest for this source. Returns error message or null. */
-  run: (options: { noCache: boolean; dryRun?: boolean }) => Promise<{ error: string | null }>;
+  /** Run discovery/ingest for this source. Returns error message or null. Optional metrics for summary logging. */
+  run: (options: { noCache: boolean; dryRun?: boolean }) => Promise<{
+    error: string | null;
+    metrics?: Record<string, number>;
+  }>;
 };
 
 const registry: Map<string, SourceDescriptor> = new Map();

@@ -39,13 +39,20 @@ function assertMatchRow(row: NormalizedMatchRow): void {
   if (row.score_away !== null && typeof row.score_away !== 'number') throw new Error('match.score_away');
 }
 
-// Standing
+// Standing (single object with .standings)
 const standingJson = loadFixture('standing');
 const standings = parseStandings(standingJson, meta);
 if (standings.length < 1) throw new Error('parseStandings should return at least one row');
 standings.forEach(assertStandingRow);
 console.log('parseStandings: OK', standings.length, 'rows');
 if (standings[0]) console.log('sample standing:', JSON.stringify(standings[0], null, 0));
+
+// Standing (API shape: array of { leagueDetails, standings } pools)
+const standingPoolsJson = loadFixture('standing-api-pools');
+const standingsFromPools = parseStandings(standingPoolsJson, meta);
+if (standingsFromPools.length !== 3) throw new Error(`parseStandings(api-pools) expected 3 rows, got ${standingsFromPools.length}`);
+standingsFromPools.forEach(assertStandingRow);
+console.log('parseStandings(api-pools): OK', standingsFromPools.length, 'rows');
 
 // Fixtures
 const fixtureJson = loadFixture('fixture');
@@ -54,6 +61,18 @@ if (fixtures.length < 1) throw new Error('parseFixtures should return at least o
 fixtures.forEach(assertMatchRow);
 console.log('parseFixtures: OK', fixtures.length, 'rows');
 if (fixtures[0]) console.log('sample fixture:', JSON.stringify(fixtures[0], null, 0));
+
+// Fixtures (object-shaped team names)
+const fixtureObjectJson = loadFixture('fixture-object');
+const fixturesFromObjects = parseFixtures(fixtureObjectJson, meta);
+if (fixturesFromObjects.length < 2) throw new Error('parseFixtures(object) should return at least two rows');
+fixturesFromObjects.forEach((row) => {
+  assertMatchRow(row);
+  if (row.home_team_name.includes('[object Object]') || row.away_team_name.includes('[object Object]')) {
+    throw new Error('parseFixtures(object) should not stringify object team names');
+  }
+});
+console.log('parseFixtures(object): OK', fixturesFromObjects.length, 'rows');
 
 // Results
 const resultJson = loadFixture('result');

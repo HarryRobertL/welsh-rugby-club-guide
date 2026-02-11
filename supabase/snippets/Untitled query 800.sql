@@ -1,0 +1,1 @@
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "select source, count(*) from public.competitions group by source order by count desc;"

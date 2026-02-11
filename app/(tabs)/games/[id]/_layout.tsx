@@ -6,10 +6,10 @@ import { Stack } from 'expo-router';
  */
 export default function MatchIdLayout() {
   return (
-    <Stack screenOptions={{ headerShown: true }}>
-      <Stack.Screen name="index" options={{ title: 'Match centre' }} />
-      <Stack.Screen name="lineup" options={{ title: 'Team sheet' }} />
-      <Stack.Screen name="live" options={{ title: 'Live console' }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="lineup" />
+      <Stack.Screen name="live" />
     </Stack>
   );
 }

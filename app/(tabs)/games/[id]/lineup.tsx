@@ -16,7 +16,6 @@ import { supabase } from '../../../../lib/supabase';
 import { publishLineup } from '../../../../services/lineup';
 import { sendMatchNotification } from '../../../../services/send-match-notifications';
 import {
-  BENCH_COUNT,
   LINEUP_SIZE,
   STARTERS_COUNT,
   type LineupRow,
@@ -76,11 +75,9 @@ export default function LineupBuilderScreen() {
     let active = true;
     setClubCheckLoading(true);
     setClubCheckError(null);
-    supabase
-      .from('teams')
-      .select('club_id')
-      .eq('id', teamId)
-      .single()
+    void Promise.resolve(
+      supabase.from('teams').select('club_id').eq('id', teamId).single()
+    )
       .then(({ data, error: err }) => {
         if (!active) return;
         if (err) {
@@ -90,7 +87,7 @@ export default function LineupBuilderScreen() {
         }
         setTeamClubId((data as { club_id: string } | null)?.club_id ?? null);
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!active) return;
         setClubCheckError(err instanceof Error ? err.message : 'Failed to load team');
         setTeamClubId(null);

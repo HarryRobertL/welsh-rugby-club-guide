@@ -14,6 +14,8 @@ export type UpcomingFixture = {
   home_team_name: string;
   away_team_name: string;
   venue_name: string | null;
+  competition_id?: string;
+  competition_name?: string;
 };
 
 export type LiveMatch = {

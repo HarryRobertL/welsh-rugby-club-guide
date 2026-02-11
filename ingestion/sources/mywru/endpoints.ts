@@ -4,27 +4,34 @@
  * File: ingestion/sources/mywru/endpoints.ts
  */
 
-/** Optional date filters for fixtures/results. */
-export type DateFilters = {
-  from?: string; // ISO date or YYYY-MM-DD
-  to?: string;
+/** Optional filters for fixtures/results. */
+export type FixturesFilters = {
+  upcoming?: boolean;
+  organisationId?: number;
+  competitionPoolId?: number;
+  page?: number;
 };
 
-const BASE = '/fixtures-results/competition';
+const BASE = '/fixtures-results';
+
+/** Active competitions list (competition instances). */
+export function activeCompetitions(): string {
+  return `${BASE}/active-competitions`;
+}
 
 /**
  * Path to competition groups for a given competition instance.
  * TODO: Discover exact path from XHR (e.g. /groups, /divisions, or embedded in overview).
  */
 export function competitionGroups(competitionInstanceId: number): string {
-  return `${BASE}/${competitionInstanceId}/groups`;
+  return `${BASE}/competition-groups?competitionInstanceId=${competitionInstanceId}`;
 }
 
 /**
  * Path to competition overview/details (known from config: .../competition/{id}/overview).
  */
 export function competitionDetails(competitionInstanceId: number): string {
-  return `${BASE}/${competitionInstanceId}/overview`;
+  return `${BASE}/competition/${competitionInstanceId}/overview`;
 }
 
 /**
@@ -32,7 +39,7 @@ export function competitionDetails(competitionInstanceId: number): string {
  * TODO: Discover exact path from XHR (e.g. .../group/{id}/table or .../group/{id}/standings).
  */
 export function competitionGroupLeagueTable(competitionGroupId: number): string {
-  return `${BASE}/group/${competitionGroupId}/table`;
+  return `${BASE}/competition-group-league-tables?competitionGroupId=${competitionGroupId}`;
 }
 
 /**
@@ -41,10 +48,16 @@ export function competitionGroupLeagueTable(competitionGroupId: number): string 
  */
 export function competitionGroupFixtures(
   competitionGroupId: number,
-  dateFilters?: DateFilters
+  filters?: FixturesFilters
 ): string {
-  const path = `${BASE}/group/${competitionGroupId}/fixtures`;
-  return appendDateFilters(path, dateFilters);
+  const params = new URLSearchParams({
+    competitionGroupId: String(competitionGroupId),
+    upcoming: String(filters?.upcoming ?? true),
+  });
+  if (filters?.organisationId != null) params.set('organisationId', String(filters.organisationId));
+  if (filters?.competitionPoolId != null) params.set('competitionPoolId', String(filters.competitionPoolId));
+  if (filters?.page != null) params.set('page', String(filters.page));
+  return `${BASE}/competition-fixtures?${params.toString()}`;
 }
 
 /**
@@ -53,17 +66,35 @@ export function competitionGroupFixtures(
  */
 export function competitionGroupResults(
   competitionGroupId: number,
-  dateFilters?: DateFilters
+  filters?: FixturesFilters
 ): string {
-  const path = `${BASE}/group/${competitionGroupId}/results`;
-  return appendDateFilters(path, dateFilters);
+  return competitionGroupFixtures(competitionGroupId, { ...filters, upcoming: false });
 }
 
-function appendDateFilters(path: string, filters?: DateFilters): string {
-  if (!filters?.from && !filters?.to) return path;
-  const params = new URLSearchParams();
-  if (filters.from) params.set('from', filters.from);
-  if (filters.to) params.set('to', filters.to);
-  const qs = params.toString();
-  return qs ? `${path}?${qs}` : path;
+/** Pool metadata for a competition group. */
+export function competitionGroupPools(competitionGroupId: number): string {
+  return `${BASE}/competition-group-pools?competitionGroupId=${competitionGroupId}`;
+}
+
+/**
+ * Knockout/cup fixtures for a competition group and round (from WRU app network: cup competitions use this).
+ * Example: competitionGroupId=662, roundId=1 for round 1.
+ */
+export function competitionKnockoutFixtures(
+  competitionGroupId: number,
+  roundId: number,
+  page = 1
+): string {
+  const params = new URLSearchParams({
+    competitionGroupId: String(competitionGroupId),
+    page: String(page),
+    roundId: String(roundId),
+  });
+  return `${BASE}/competition-knockout-fixtures?${params.toString()}`;
+}
+
+/** Organisations/teams for a competition group. */
+export function competitionGroupOrganisations(competitionGroupId: number): string {
+  const params = new URLSearchParams({ competitionGroupId: String(competitionGroupId) });
+  return `${BASE}/competition-organisations?${params.toString()}`;
 }

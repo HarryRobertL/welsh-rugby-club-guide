@@ -15,8 +15,10 @@ import { runParse } from './parsers/run-parse';
 import { loadMyWruConfig, runMyWruDiscovery } from './sources/mywru';
 import { getSource } from './sources/registry';
 
-// Side-effect: register allwalessport so getSource('allwalessport') works
+// Side-effect: register allwalessport, sixnations, sixnations_www so getSource(...) works
 import './sources/allwalessport';
+import './sources/sixnations';
+import './sources/sixnations-www';
 
 function parseArgv(): { noCache: boolean; source?: string } {
   const args = process.argv.slice(2);
@@ -53,6 +55,7 @@ async function main(): Promise<void> {
 
   if (source === 'allwalessport') {
     const dryRun = process.env.INGEST_DRY_RUN === '1';
+    const startTime = Date.now();
     if (dryRun) {
       console.info('[ingestion] AllWalesSport dry run: discovery and parsing only; DB persist skipped.');
     }
@@ -74,27 +77,91 @@ async function main(): Promise<void> {
     } else if (parseResult.processed > 0) {
       console.info('[ingestion] parse stage:', parseResult.processed, 'items');
     }
-    if (dryRun) {
+    let persistResult: {
+      competitionsProcessed: number;
+      totalFixtures: number;
+      totalResults: number;
+      totalStandings: number;
+      totalTeamsCreated: number;
+      failures: string[];
+    } = {
+      competitionsProcessed: 0,
+      totalFixtures: 0,
+      totalResults: 0,
+      totalStandings: 0,
+      totalTeamsCreated: 0,
+      failures: [],
+    };
+    if (!dryRun) {
+      const { runPersistAllWalesSport } = await import('./sources/allwalessport/persist');
+      const pr = await runPersistAllWalesSport({ supabase: supabaseAdmin });
+      persistResult = pr;
+      if (pr.error) {
+        console.warn('[ingestion] AllWalesSport persist error:', pr.error);
+      }
+      if (pr.competitionsProcessed > 0) {
+        console.info('[ingestion] AllWalesSport persist:', {
+          competitions: pr.competitionsProcessed,
+          fixtures: pr.totalFixtures,
+          results: pr.totalResults,
+          standings: pr.totalStandings,
+          teamsCreated: pr.totalTeamsCreated,
+        });
+      }
+      if (pr.failures.length > 0) {
+        console.warn('[ingestion] AllWalesSport persist failures:', pr.failures.length, pr.failures.slice(0, 5));
+      }
+    } else {
       console.info('[ingestion] dry run: skipping persist stage.');
-      return;
     }
-    const { runPersistAllWalesSport } = await import('./sources/allwalessport/persist');
-    const persistResult = await runPersistAllWalesSport({ supabase: supabaseAdmin });
-    if (persistResult.error) {
-      console.warn('[ingestion] AllWalesSport persist error:', persistResult.error);
+    const durationMs = Date.now() - startTime;
+    const summary = {
+      competitionsDiscovered: result.metrics?.competitionsDiscovered ?? 0,
+      competitionsScraped: result.metrics?.competitionsScraped ?? 0,
+      competitionsPersisted: persistResult.competitionsProcessed,
+      fixturesParsed: result.metrics?.fixturesParsed ?? 0,
+      resultsParsed: result.metrics?.resultsParsed ?? 0,
+      standingsParsed: result.metrics?.standingsParsed ?? 0,
+      fixturesWritten: persistResult.totalFixtures,
+      resultsWritten: persistResult.totalResults,
+      standingsWritten: persistResult.totalStandings,
+      teamsCreated: persistResult.totalTeamsCreated,
+      errorsCount: (result.metrics?.errorsCount ?? 0) + persistResult.failures.length,
+      durationMs,
+    };
+    console.info('[ingestion] AllWalesSport summary', JSON.stringify(summary));
+    return;
+  }
+
+  if (source === 'sixnations') {
+    const dryRun = process.env.INGEST_DRY_RUN === '1';
+    const descriptor = getSource('sixnations');
+    if (!descriptor) {
+      console.error('[ingestion] source sixnations not registered');
+      process.exit(1);
     }
-    if (persistResult.competitionsProcessed > 0) {
-      console.info('[ingestion] AllWalesSport persist:', {
-        competitions: persistResult.competitionsProcessed,
-        fixtures: persistResult.totalFixtures,
-        results: persistResult.totalResults,
-        standings: persistResult.totalStandings,
-        teamsCreated: persistResult.totalTeamsCreated,
-      });
+    const result = await descriptor.run({ noCache, dryRun });
+    if (result.error) {
+      console.error('[ingestion] sixnations failed:', result.error);
+      process.exit(1);
     }
-    if (persistResult.failures.length > 0) {
-      console.warn('[ingestion] AllWalesSport persist failures:', persistResult.failures.length, persistResult.failures.slice(0, 5));
+    console.info('[ingestion] Six Nations summary', result.metrics ?? {});
+    return;
+  }
+
+  if (source === 'sixnations_www') {
+    const dryRun = process.env.INGEST_DRY_RUN === '1';
+    const descriptor = getSource('sixnations_www');
+    if (!descriptor) {
+      console.error('[ingestion] source sixnations_www not registered');
+      process.exit(1);
     }
+    const result = await descriptor.run({ noCache, dryRun });
+    if (result.error) {
+      console.error('[ingestion] sixnations_www failed:', result.error);
+      process.exit(1);
+    }
+    console.info('[ingestion] Six Nations (www) summary', result.metrics ?? {});
     return;
   }
 
@@ -115,8 +182,10 @@ async function main(): Promise<void> {
           skipCache: noCache || process.env.DISABLE_CACHE === '1',
         })
       : client;
+  const apiClient = discoveryClient;
 
-  if (config.roots && config.roots.length > 0) {
+  const runMyWruStages = (config.roots && config.roots.length > 0) || config.useActiveCompetitions;
+  if (runMyWruStages) {
     const discovery = await runMyWruDiscovery({
       config,
       httpClient: discoveryClient,
@@ -128,6 +197,26 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     console.info('[ingestion] MyWRU discovery:', discovery.stats);
+  }
+
+  if (runMyWruStages) {
+    const { runMyWruSync } = await import('./sources/mywru/sync');
+    const syncResult = await runMyWruSync({
+      config,
+      httpClient: apiClient,
+      supabase: supabaseAdmin,
+    });
+    if (syncResult.error) {
+      console.warn('[ingestion] MyWRU sync failed:', syncResult.error);
+    } else {
+      console.info('[ingestion] MyWRU sync:', {
+        groups: syncResult.groups,
+        fixturesFetched: syncResult.fixturesFetched,
+        resultsFetched: syncResult.resultsFetched,
+        standingsFetched: syncResult.standingsFetched,
+        ingestItems: syncResult.ingestItems,
+      });
+    }
   }
 
   const result = await runNextIngestJob({
@@ -154,6 +243,29 @@ async function main(): Promise<void> {
     printMigrationReminderIfNeeded(parseResult.error);
   } else if (parseResult.processed > 0) {
     console.info('[ingestion] parse stage:', parseResult.processed, 'items');
+  }
+
+  if (runMyWruStages) {
+    const { runPersistMyWru } = await import('./sources/mywru/persist');
+    const persistResult = await runPersistMyWru({ supabase: supabaseAdmin });
+    if (persistResult.error) {
+      console.warn('[ingestion] MyWRU persist error:', persistResult.error);
+    } else if (persistResult.groupsProcessed > 0) {
+      console.info('[ingestion] MyWRU persist:', {
+        groups: persistResult.groupsProcessed,
+        fixtures: persistResult.fixturesWritten,
+        results: persistResult.resultsWritten,
+        standings: persistResult.standingsWritten,
+        teamsCreated: persistResult.teamsCreated,
+      });
+    }
+    if (persistResult.failures.length > 0) {
+      console.warn(
+        '[ingestion] MyWRU persist failures:',
+        persistResult.failures.length,
+        persistResult.failures.slice(0, 5)
+      );
+    }
   }
 }
 
