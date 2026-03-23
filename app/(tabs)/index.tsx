@@ -268,6 +268,46 @@ export default function HomeScreen() {
     );
   }
 
+  if (error && !hasCachedData) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassHeader
+          titleSlot={
+            <View style={styles.logoWrap}>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                accessibilityLabel="Cymru Rugby"
+              />
+            </View>
+          }
+          rightSlot={
+            <View style={styles.headerRight}>
+              <GlassHeaderButton accessibilityLabel="Notifications" onPress={() => {}}>
+                <Icon name="Bell" size={22} color={colors.text} />
+              </GlassHeaderButton>
+              <GlassHeaderButton
+                accessibilityLabel="Account"
+                onPress={() => router.push('/(tabs)/account')}
+              >
+                <Icon name="Person" size={22} color={colors.text} />
+              </GlassHeaderButton>
+            </View>
+          }
+        />
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            title="Could not load home feed"
+            description={error}
+            primaryAction={{ label: 'Retry', onPress: refetch }}
+            mode="error"
+          />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <GlassHeader

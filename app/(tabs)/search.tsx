@@ -32,7 +32,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const colors = useResolvedColors();
   const [query, setQuery] = useState('');
-  const { competitions, teams, loading, error } = useSearch(query);
+  const { competitions, teams, loading, error, refetch } = useSearch(query);
 
   const hasQuery = query.trim().length >= 2;
   const hasResults = competitions.length > 0 || teams.length > 0;
@@ -82,7 +82,7 @@ export default function SearchScreen() {
             <EmptyState
               title="Search failed"
               description={error ?? 'Something went wrong.'}
-              primaryAction={{ label: 'Try again', onPress: () => setQuery(query) }}
+              primaryAction={{ label: 'Try again', onPress: refetch }}
               mode="error"
             />
           </View>

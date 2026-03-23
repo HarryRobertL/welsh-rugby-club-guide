@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 import { FavouriteButton } from '../../../components/FavouriteButton';
+import { DatePickerModal } from '../../../features/games/DatePickerModal';
+import { LeagueTablesModal } from '../../../features/games/LeagueTablesModal';
 import { useFixturesList } from '../../../features/games/useFixturesList';
 import { useFavourites } from '../../../features/favourites/useFavourites';
 import { teamLabel } from '../../../lib/teamLabel';
@@ -48,6 +50,11 @@ function isToday(iso: string): boolean {
   const d = new Date(iso);
   const t = new Date();
   return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
+}
+
+function matchDayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 type SegmentId = 'live' | 'today' | 'upcoming' | 'results';
@@ -206,6 +213,9 @@ export default function FixturesListScreen() {
     now: nowDate,
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [tablesModalVisible, setTablesModalVisible] = useState(false);
+  const [jumpDate, setJumpDate] = useState<Date | null>(null);
   const livePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -228,6 +238,36 @@ export default function FixturesListScreen() {
     }
     return Array.from(seen.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [fixtures]);
+
+  const matchDays = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of fixtures) set.add(matchDayKey(f.scheduled_at));
+    return set;
+  }, [fixtures]);
+
+  const competitionStubs = useMemo(
+    () => competitionsFromFixtures.map(([id, name]) => ({ id, name })),
+    [competitionsFromFixtures]
+  );
+
+  const handleDateSelect = useCallback(
+    (date: Date) => {
+      setJumpDate(date);
+      const todayNow = new Date();
+      const isTodayDate =
+        date.getDate() === todayNow.getDate() &&
+        date.getMonth() === todayNow.getMonth() &&
+        date.getFullYear() === todayNow.getFullYear();
+      if (isTodayDate) {
+        setSegment('today');
+      } else if (date > todayNow) {
+        setSegment('upcoming');
+      } else {
+        setSegment('results');
+      }
+    },
+    []
+  );
 
   const grouped = useMemo(
     () => filterAndGroup(fixtures, segment, leagueFilter, favouriteTeamIds, favouriteCompetitionIds, nowDate),
@@ -281,10 +321,10 @@ export default function FixturesListScreen() {
         titleSlot={null}
         rightSlot={
           <View style={styles.headerRight}>
-            <GlassHeaderButton accessibilityLabel="Calendar" onPress={() => {}}>
+            <GlassHeaderButton accessibilityLabel="Jump to date" onPress={() => setDatePickerVisible(true)}>
               <Icon name="Calendar" size={22} color={colors.text} />
             </GlassHeaderButton>
-            <GlassHeaderButton accessibilityLabel="Filter" onPress={() => {}}>
+            <GlassHeaderButton accessibilityLabel="League tables" onPress={() => setTablesModalVisible(true)}>
               <Icon name="Table" size={22} color={colors.text} />
             </GlassHeaderButton>
           </View>
@@ -419,6 +459,20 @@ export default function FixturesListScreen() {
         )}
         <View style={styles.footer} />
       </ScrollView>
+
+      <DatePickerModal
+        visible={datePickerVisible}
+        onClose={() => setDatePickerVisible(false)}
+        selectedDate={jumpDate ?? nowDate}
+        onSelectDate={handleDateSelect}
+        matchDays={matchDays}
+      />
+
+      <LeagueTablesModal
+        visible={tablesModalVisible}
+        onClose={() => setTablesModalVisible(false)}
+        competitions={competitionStubs}
+      />
     </View>
   );
 }

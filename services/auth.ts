@@ -18,22 +18,72 @@ export type AuthProfile = {
   notify_full_time: boolean;
 };
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isAlreadyRegisteredError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /user already registered/i.test(message);
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  const maybe = error as { code?: string; message?: string } | null | undefined;
+  if (!maybe) return false;
+  return maybe.code === '23505' || /duplicate key/i.test(maybe.message ?? '');
+}
+
 export async function signUp(email: string, password: string): Promise<{ error: Error | null }> {
-  const { data, error: authError } = await supabase.auth.signUp({ email, password });
-  if (authError) return { error: authError as Error };
+  const cleanEmail = normalizeEmail(email);
+  const { data, error: authError } = await supabase.auth.signUp({ email: cleanEmail, password });
+  if (authError) {
+    // If account exists, try sign-in with provided password for smoother recovery.
+    if (isAlreadyRegisteredError(authError)) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+      if (!signInError) return { error: null };
+      return {
+        error: new Error(
+          'Account already exists. Sign in with your password, or reset it if needed.'
+        ),
+      };
+    }
+    return { error: authError as Error };
+  }
   if (!data.user) return { error: new Error('No user returned') };
-  // Insert type not fully inferred from custom Database type; remove when using supabase gen types
-  const { error: profileError } = await (supabase.from('users') as any).insert({
-    id: data.user.id,
-    role: 'supporter',
-  } satisfies Database['public']['Tables']['users']['Insert']);
-  if (profileError) return { error: profileError as Error };
+
+  // Session may be null when email confirmation is required by project settings.
+  // In that case, profile row creation is deferred until first authenticated session.
+  if (data.session?.user?.id) {
+    // Insert type not fully inferred from custom Database type; remove when using supabase gen types
+    const { error: profileError } = await (supabase.from('users') as any).insert({
+      id: data.user.id,
+      role: 'supporter',
+    } satisfies Database['public']['Tables']['users']['Insert']);
+    if (profileError && !isDuplicateKeyError(profileError)) return { error: profileError as Error };
+  }
   return { error: null };
 }
 
 export async function signIn(email: string, password: string): Promise<{ error: Error | null }> {
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  return { error: error as Error | null };
+  const cleanEmail = normalizeEmail(email);
+  const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+  if (error) return { error: error as Error };
+
+  const userId = data.user?.id;
+  if (userId) {
+    const { error: profileError } = await (supabase.from('users') as any).insert({
+      id: userId,
+      role: 'supporter',
+    } satisfies Database['public']['Tables']['users']['Insert']);
+    if (profileError && !isDuplicateKeyError(profileError)) {
+      return { error: profileError as Error };
+    }
+  }
+
+  return { error: null };
 }
 
 export async function signOut(): Promise<void> {

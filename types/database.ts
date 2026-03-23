@@ -276,7 +276,15 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      review_pending_claim: {
+        Args: {
+          claim_id_in: string;
+          decision_in: string;
+        };
+        Returns: Database['public']['Tables']['pending_claims']['Row'];
+      };
+    };
     Enums: {
       user_role: UserRole;
     };

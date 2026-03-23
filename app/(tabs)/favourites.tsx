@@ -183,7 +183,17 @@ export default function FavouritesScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <GlassHeader
         leftSlot={
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Back to Home" hitSlop={HIT_SLOP}>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              styles.backBtn,
+              pressed && styles.pressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Home"
+            focusable
+            hitSlop={HIT_SLOP}
+          >
             <Icon name="ArrowBack" size={24} color={colors.text} />
           </Pressable>
         }
@@ -325,7 +335,15 @@ const styles = StyleSheet.create({
   },
   rowTitle: { flex: 1, marginRight: tokens.spacing.sm },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.sm },
-  backBtn: { padding: 4 },
+  backBtn: {
+    minWidth: MIN_TOUCH,
+    minHeight: MIN_TOUCH,
+    borderRadius: tokens.radius.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pressed: { opacity: 0.9 },
   noResults: { paddingHorizontal: tokens.spacing.lg, marginTop: tokens.spacing.sm },
   searchResults: { maxHeight: 240 },

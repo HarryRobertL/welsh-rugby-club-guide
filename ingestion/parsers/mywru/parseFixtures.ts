@@ -11,10 +11,25 @@ function safeStr(v: unknown): string {
   return typeof v === 'string' ? v : String(v);
 }
 
+function isBadTeamString(s: string): boolean {
+  const trimmed = s.trim();
+  if (!trimmed) return true;
+  const lowered = trimmed.toLowerCase();
+  return (
+    lowered === '[object object]' ||
+    lowered.includes('object object') ||
+    lowered === 'null' ||
+    lowered === 'undefined'
+  );
+}
+
 function safeTeamName(v: unknown): string {
   if (v == null) return '';
   if (Array.isArray(v)) return safeTeamName(v[0]);
-  if (typeof v === 'string') return v.trim();
+  if (typeof v === 'string') {
+    const s = v.trim();
+    return isBadTeamString(s) ? '' : s;
+  }
   if (typeof v === 'number') return String(v);
   if (typeof v === 'object') {
     const o = v as Record<string, unknown>;
@@ -26,7 +41,10 @@ function safeTeamName(v: unknown): string {
       o.shortName ??
       o.label ??
       o.title;
-    if (typeof name === 'string' && name.trim()) return name.trim();
+    if (typeof name === 'string') {
+      const s = name.trim();
+      if (!isBadTeamString(s)) return s;
+    }
   }
   return '';
 }
@@ -121,7 +139,7 @@ export function parseFixtures(
         m.teamBName ??
         m.teamB
     );
-    if (!homeName || !awayName) continue;
+    if (!homeName && !awayName) continue;
 
     const kickoff_at = toIsoLike(
       m.kickoff ??

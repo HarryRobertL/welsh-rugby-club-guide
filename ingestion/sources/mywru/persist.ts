@@ -27,12 +27,20 @@ function normalizeText(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
-function isValidTeamName(name: string | null | undefined): boolean {
-  const trimmed = (name ?? '').trim();
-  if (!trimmed) return false;
+function sanitizeTeamName(name: unknown): string {
+  if (typeof name !== 'string') return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
   const lower = trimmed.toLowerCase();
-  if (lower.includes('[object object]') || lower === 'object object') return false;
-  return true;
+  if (
+    lower === '[object object]' ||
+    lower.includes('object object') ||
+    lower === 'null' ||
+    lower === 'undefined'
+  ) {
+    return '';
+  }
+  return trimmed;
 }
 
 function slugify(s: string): string {
@@ -98,8 +106,10 @@ async function ensureTeam(
   clubId: string,
   groupId: string,
   teamName: string
-): Promise<string> {
-  const srcName = sourceTeamName(groupId, teamName);
+): Promise<string | null> {
+  const cleanName = sanitizeTeamName(teamName);
+  if (!cleanName) return null;
+  const srcName = sourceTeamName(groupId, cleanName);
   const { data: mapping } = await (supabase.from('source_team_map') as any)
     .select('team_id')
     .eq('source', SOURCE)
@@ -107,12 +117,12 @@ async function ensureTeam(
     .maybeSingle();
   if (mapping?.team_id) return (mapping as { team_id: string }).team_id;
 
-  const baseSlug = slugify(teamName) || 'team';
+  const baseSlug = slugify(cleanName) || 'team';
   const slug = `${SOURCE}-${groupId}-${baseSlug}`.slice(0, 100);
   const { data: team, error } = await (supabase.from('teams') as any)
     .insert({
       club_id: clubId,
-      name: normalizeText(teamName),
+      name: normalizeText(cleanName),
       slug,
       team_type: TEAM_TYPE,
     })
@@ -351,11 +361,23 @@ export async function runPersistMyWru(options: {
       const seasonId = await ensureSeason(supabase, competitionId, g.competition_group_id, firstKickoff);
 
       const teamCache = new Map<string, string>();
-      const getTeamId = async (name: string): Promise<string> => {
-        const key = sourceTeamName(g.competition_group_id, name);
-        let id = teamCache.get(key);
+      const getTeamId = async (
+        name: unknown,
+        trace: { source_match_ref: string; fixture_hash: string; side?: 'home' | 'away'; source_ref: string }
+      ): Promise<string | null> => {
+        const cleanName = sanitizeTeamName(name);
+        if (!cleanName) {
+          console.warn('[MyWRU persist] skip team upsert polluted team name', {
+            ...trace,
+            raw_team_name: name,
+          });
+          return null;
+        }
+        const key = sourceTeamName(g.competition_group_id, cleanName);
+        let id: string | null | undefined = teamCache.get(key);
         if (!id) {
-          id = await ensureTeam(supabase, clubId, g.competition_group_id, name);
+          id = await ensureTeam(supabase, clubId, g.competition_group_id, cleanName);
+          if (!id) return null;
           teamCache.set(key, id);
           out.teamsCreated += 1;
         }
@@ -363,14 +385,24 @@ export async function runPersistMyWru(options: {
       };
 
       const upsertFixture = async (m: NormalizedMatchRow): Promise<string | null> => {
-        const homeName = m.home_team_name?.trim() || 'TBC';
-        const awayName = m.away_team_name?.trim() || 'TBC';
-        if (!isValidTeamName(homeName) || !isValidTeamName(awayName)) {
+        const kickoff = m.kickoff_at ?? new Date().toISOString();
+        const sourceMatchRef =
+          m.source_match_ref || hashMatchRef(g.competition_group_id, m.home_team_name, m.away_team_name, kickoff);
+        const fixtureHash = hashMatchRef(
+          g.competition_group_id,
+          String(m.home_team_name ?? ''),
+          String(m.away_team_name ?? ''),
+          kickoff
+        );
+        const homeName = sanitizeTeamName(m.home_team_name);
+        const awayName = sanitizeTeamName(m.away_team_name);
+        if (!homeName || !awayName) {
           console.warn('[MyWRU persist] skip fixture invalid team name', {
-            groupId: g.competition_group_id,
-            home_team_name: homeName,
-            away_team_name: awayName,
-            source_match_ref: m.source_match_ref,
+            source_ref: g.competition_group_id,
+            source_match_ref: sourceMatchRef,
+            fixture_hash: fixtureHash,
+            home_team_name: m.home_team_name,
+            away_team_name: m.away_team_name,
           });
           return null;
         }
@@ -379,13 +411,21 @@ export async function runPersistMyWru(options: {
         // When both sides normalize to same (e.g. TBC vs TBC), use distinct labels so we get two team IDs and satisfy fixtures_teams_different
         const homeLabel = homeNorm && homeNorm === awayNorm ? `${homeName} (Home)` : homeName;
         const awayLabel = awayNorm && homeNorm === awayNorm ? `${awayName} (Away)` : awayName;
-        const homeId = await getTeamId(homeLabel);
-        const awayId = await getTeamId(awayLabel);
+        const homeId = await getTeamId(homeLabel, {
+          source_ref: g.competition_group_id,
+          source_match_ref: sourceMatchRef,
+          fixture_hash: fixtureHash,
+          side: 'home',
+        });
+        const awayId = await getTeamId(awayLabel, {
+          source_ref: g.competition_group_id,
+          source_match_ref: sourceMatchRef,
+          fixture_hash: fixtureHash,
+          side: 'away',
+        });
+        if (!homeId || !awayId) return null;
         if (homeId === awayId) return null; // fallback skip if still same
-        const kickoff = m.kickoff_at ?? new Date().toISOString();
         const status = normalizeFixtureStatus(m.status);
-        const sourceMatchRef =
-          m.source_match_ref || hashMatchRef(g.competition_group_id, m.home_team_name, m.away_team_name, kickoff);
         const { data: existing } = await (supabase.from('fixtures') as any)
           .select('id')
           .eq('competition_group_id', seasonId)
@@ -496,14 +536,22 @@ export async function runPersistMyWru(options: {
         });
       }
       for (const s of g.standings) {
-        if (!isValidTeamName(s.team_name)) {
+        const cleanStandingTeamName = sanitizeTeamName(s.team_name);
+        if (!cleanStandingTeamName) {
           console.warn('[MyWRU persist] skip standing invalid team name', {
-            groupId: g.competition_group_id,
+            source_ref: g.competition_group_id,
+            source_match_ref: null,
+            fixture_hash: null,
             team_name: s.team_name,
           });
           continue;
         }
-        const teamId = await getTeamId(s.team_name);
+        const teamId = await getTeamId(cleanStandingTeamName, {
+          source_ref: g.competition_group_id,
+          source_match_ref: 'standing',
+          fixture_hash: 'standing',
+        });
+        if (!teamId) continue;
         const points =
           s.table_points ?? (4 * (s.won ?? 0) + 2 * (s.drawn ?? 0));
         const row: Record<string, unknown> = {

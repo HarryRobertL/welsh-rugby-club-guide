@@ -241,7 +241,27 @@ export default function MatchCentreScreen() {
   }
 
   if (!matchCentre) {
-    return null;
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <GlassHeader
+          leftSlot={
+            <GlassHeaderButton accessibilityLabel="Go back" onPress={() => router.back()}>
+              <Icon name="ArrowBack" size={24} color={colors.text} />
+            </GlassHeaderButton>
+          }
+          titleSlot={<Text variant="bodyBold" color="text">Match</Text>}
+        />
+        <View style={styles.errorContent}>
+          <EmptyState
+            title="Match unavailable"
+            description="We couldn't load this match right now."
+            primaryAction={{ label: 'Retry', onPress: refetch }}
+            secondaryAction={{ label: 'Back', onPress: () => router.back() }}
+            mode="error"
+          />
+        </View>
+      </View>
+    );
   }
 
   const m = matchCentre;

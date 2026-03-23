@@ -12,6 +12,7 @@ export function useSearch(query: string): {
   teams: SearchTeam[];
   loading: boolean;
   error: string | null;
+  refetch: () => Promise<void>;
 } {
   const [competitions, setCompetitions] = useState<SearchCompetition[]>([]);
   const [teams, setTeams] = useState<SearchTeam[]>([]);
@@ -37,7 +38,11 @@ export function useSearch(query: string): {
           .select('id, name, slug')
           .or(`name.ilike.${pattern},slug.ilike.${pattern}`)
           .limit(LIMIT),
-        supabase.from('teams').select('id, name').ilike('name', pattern).limit(LIMIT),
+        supabase
+          .from('teams_search_deduped')
+          .select('id, name')
+          .or(`name.ilike.${pattern},search_key.ilike.${pattern}`)
+          .limit(LIMIT),
       ]);
       if (compRes.error) throw compRes.error;
       if (teamsRes.error) throw teamsRes.error;
@@ -57,5 +62,9 @@ export function useSearch(query: string): {
     return () => clearTimeout(t);
   }, [query, search]);
 
-  return { competitions, teams, loading, error };
+  const refetch = useCallback(async () => {
+    await search(query);
+  }, [query, search]);
+
+  return { competitions, teams, loading, error, refetch };
 }

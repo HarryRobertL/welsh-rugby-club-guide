@@ -9,7 +9,7 @@ type ClubRow = { id: string; name: string; slug: string };
 type PendingClaimRow = { id: string; club_id: string; status: string; created_at: string };
 
 /**
- * Club claim screen. Select a club and attach to profile (users.club_id) with approval flow.
+ * Club claim screen. Users can submit a claim request; role assignment is admin-only.
  * File: app/(tabs)/claim-club.tsx — route /claim-club.
  */
 export default function ClaimClubScreen() {
@@ -79,41 +79,18 @@ export default function ClaimClubScreen() {
   );
   const selectedIsCurrent = !!selectedClub?.id && selectedClub.id === profile?.club_id;
 
-  const allowedDomains = useMemo(() => {
-    return (process.env.EXPO_PUBLIC_CLAIM_CLUB_ALLOWLIST ?? '')
-      .split(',')
-      .map((v: string) => v.trim().toLowerCase())
-      .filter(Boolean);
-  }, []);
-  const emailDomain = useMemo(() => {
-    const email = session?.user?.email ?? '';
-    return email.split('@')[1]?.toLowerCase() ?? '';
-  }, [session?.user?.email]);
-  const isAutoApproved = useMemo(
-    () => !!emailDomain && allowedDomains.includes(emailDomain),
-    [allowedDomains, emailDomain]
-  );
-
   const handleClaim = useCallback(async () => {
     if (!profile?.id || !selectedClub) return;
     setSubmitting(true);
     setError(null);
     try {
-      const updatePayload: { club_id: string; role?: 'club_admin' } = { club_id: selectedClub.id };
-      if (isAutoApproved) updatePayload.role = 'club_admin';
-      const { error: updateErr } = await (supabase.from('users') as any)
-        .update(updatePayload)
-        .eq('id', profile.id);
-      if (updateErr) throw updateErr;
-      if (!isAutoApproved) {
-        const { error: claimErr } = await (supabase.from('pending_claims') as any).upsert({
-          user_id: profile.id,
-          club_id: selectedClub.id,
-          status: 'pending',
-          requester_email: session?.user?.email ?? null,
-        });
-        if (claimErr) throw claimErr;
-      }
+      const { error: claimErr } = await (supabase.from('pending_claims') as any).upsert({
+        user_id: profile.id,
+        club_id: selectedClub.id,
+        status: 'pending',
+        requester_email: session?.user?.email ?? null,
+      });
+      if (claimErr) throw claimErr;
       await refreshProfile();
       await fetchPendingClaim();
       router.back();
@@ -122,23 +99,7 @@ export default function ClaimClubScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [profile?.id, selectedClub, isAutoApproved, refreshProfile, fetchPendingClaim, router, session?.user?.email]);
-
-  const handleClear = useCallback(async () => {
-    if (!profile?.id) return;
-    setSubmitting(true);
-    const { error: err } = await (supabase.from('users') as any)
-      .update({ club_id: null })
-      .eq('id', profile.id);
-    if (err) {
-      setError(err.message);
-    } else {
-      await (supabase.from('pending_claims') as any).delete().eq('user_id', profile.id);
-      await refreshProfile();
-      await fetchPendingClaim();
-    }
-    setSubmitting(false);
-  }, [profile?.id, refreshProfile, fetchPendingClaim]);
+  }, [profile?.id, selectedClub, refreshProfile, fetchPendingClaim, router, session?.user?.email]);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
@@ -161,13 +122,9 @@ export default function ClaimClubScreen() {
           <Text style={{ ...theme.typography.bodyStrong, marginBottom: 8 }}>
             {currentClub?.name ?? profile.club_id}
           </Text>
-          <TouchableOpacity
-            onPress={handleClear}
-            disabled={submitting}
-            style={{ padding: 10, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.md }}
-          >
-            <Text style={{ color: theme.colors.textSecondary }}>Clear claim</Text>
-          </TouchableOpacity>
+          <Text style={{ ...theme.typography.caption }}>
+            Club assignments are managed by league administrators.
+          </Text>
         </View>
       ) : null}
 
@@ -200,9 +157,7 @@ export default function ClaimClubScreen() {
           <Text style={{ ...theme.typography.bodyStrong, marginBottom: 4 }}>{selectedClub.name}</Text>
           <Text style={{ ...theme.typography.caption, marginBottom: 16 }}>{selectedClub.slug}</Text>
           <Text style={{ ...theme.typography.caption, marginBottom: 16 }}>
-            {isAutoApproved
-              ? 'Your email domain matches our allowlist, so you will get club admin access immediately.'
-              : 'We will review this request. You will not have club admin access until approved.'}
+            We will review this request. You will not have club admin access until approved by a league admin.
           </Text>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <TouchableOpacity

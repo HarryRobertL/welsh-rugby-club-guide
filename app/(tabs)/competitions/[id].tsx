@@ -50,7 +50,7 @@ export default function CompetitionDetailScreen() {
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const effectiveSeasonId = selectedSeasonId ?? seasons[0]?.id;
-  const { rows, loading: standingsLoading, error: standingsError, refetch } = useStandingsWithForm(effectiveSeasonId);
+  const { rows, loading: standingsLoading, error: standingsErrorMessage, refetch } = useStandingsWithForm(effectiveSeasonId);
   const {
     fixtures,
     loading: fixturesLoading,
@@ -89,7 +89,7 @@ export default function CompetitionDetailScreen() {
   }, [effectiveSeasonId, hasLiveFixture]);
 
   const loading = competitionLoading || seasonsLoading || standingsLoading;
-  const error = seasonsError ?? standingsError ?? fixturesError;
+  const standingsError = seasonsError ?? standingsErrorMessage;
 
   const { upcomingFixtures, resultsFixtures } = useMemo(() => {
     const now = nowIso();
@@ -256,6 +256,8 @@ export default function CompetitionDetailScreen() {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         <GlassCard variant="card" style={styles.sectionCard}>
@@ -287,11 +289,11 @@ export default function CompetitionDetailScreen() {
             <Skeleton variant="line" style={styles.skeletonLine} />
             <Skeleton variant="block" width={320} height={200} style={styles.skeletonBlock} />
           </GlassCard>
-        ) : error ? (
+        ) : standingsError ? (
           <View style={styles.inlineErrorWrap}>
             <EmptyState
               title="Something went wrong"
-              description={error}
+              description={standingsError}
               primaryAction={{ label: 'Retry', onPress: onRefresh }}
               mode="error"
             />

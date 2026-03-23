@@ -65,7 +65,7 @@ function RootStack() {
             headerShown: false,
             header: () => null,
             headerTransparent: true,
-            headerStyle: { height: 0, minHeight: 0, backgroundColor: 'transparent' },
+            headerStyle: { backgroundColor: 'transparent' },
             contentStyle: { backgroundColor: resolvedColors.background },
             animation: 'default',
           }}

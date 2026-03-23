@@ -2,9 +2,9 @@ import { BlurView } from 'expo-blur';
 import React, { useEffect, useState } from 'react';
 import {
   AccessibilityInfo,
+  Pressable,
   Platform,
   StyleSheet,
-  TouchableOpacity,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -99,18 +99,22 @@ export function GlassHeaderButton({
   children: React.ReactNode;
   accessibilityLabel: string;
   onPress?: () => void;
-} & Omit<React.ComponentProps<typeof TouchableOpacity>, 'children'>) {
+} & Omit<React.ComponentProps<typeof Pressable>, 'children'>) {
   return (
-    <TouchableOpacity
+    <Pressable
       hitSlop={HIT_SLOP}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      activeOpacity={0.7}
+      focusable
+      style={({ pressed }) => [
+        styles.headerButton,
+        pressed && styles.headerButtonPressed,
+      ]}
       {...rest}
     >
       {children}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -146,5 +150,18 @@ const styles = StyleSheet.create({
   slotRight: {
     minWidth: 44,
     alignItems: 'flex-end',
+  },
+  headerButton: {
+    minWidth: 44,
+    minHeight: 44,
+    padding: 8,
+    borderRadius: tokens.radius.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerButtonPressed: {
+    opacity: 0.75,
   },
 });

@@ -11,7 +11,7 @@ export default function CompetitionsLayout() {
         headerShown: false,
         header: () => null,
         headerTransparent: true,
-        headerStyle: { height: 0, minHeight: 0, backgroundColor: 'transparent' },
+        headerStyle: { backgroundColor: 'transparent' },
       }}
     >
       <Stack.Screen name="index" />

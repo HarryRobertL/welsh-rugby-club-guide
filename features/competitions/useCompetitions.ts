@@ -14,6 +14,16 @@ const HIDDEN_COMPETITION_IDS = new Set([
   '46ca99b4-b1f0-421b-96c4-0e81ece7343d',
 ]);
 
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
+
+function normalizeCompetitionName(name: string | null | undefined): string {
+  return (name ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function normalizeCompetitionSlug(slug: string | null | undefined): string {
+  return (slug ?? '').trim().toLowerCase();
+}
+
 function isWruControlledLeagueName(name: string | null | undefined): boolean {
   const n = (name ?? '').toLowerCase().trim();
   if (!n) return false;
@@ -72,10 +82,49 @@ export function useCompetitions(): {
         .order('name', { ascending: true });
       if (err) throw err;
       const raw = (data ?? []) as Competition[];
+      const mywruSlugSet = new Set(
+        raw
+          .filter((c) => c.source === 'mywru')
+          .map((c) => normalizeCompetitionSlug(c.slug))
+          .filter(Boolean)
+      );
+      const mywruNameSet = new Set(
+        raw
+          .filter((c) => c.source === 'mywru')
+          .map((c) => normalizeCompetitionName(c.name))
+          .filter(Boolean)
+      );
+
       const filtered = raw.filter(
-        (c) =>
-          !HIDDEN_COMPETITION_IDS.has(c.id) &&
-          !(c.source === 'allwalessport' && isWruControlledLeagueName(c.name))
+        (c) => {
+          if (HIDDEN_COMPETITION_IDS.has(c.id)) return false;
+
+          if (c.competition_type === 'university') return true;
+          if (c.source === 'mywru') return true;
+
+          if (c.source === 'allwalessport') {
+            const slugKey = normalizeCompetitionSlug(c.slug);
+            const nameKey = normalizeCompetitionName(c.name);
+            const duplicatesMyWru =
+              (slugKey && mywruSlugSet.has(slugKey)) ||
+              (nameKey && mywruNameSet.has(nameKey));
+
+            if (duplicatesMyWru) return false;
+
+            // Heuristic now acts as fallback signal only, not source-selection logic.
+            if (isDev && isWruControlledLeagueName(c.name)) {
+              console.warn('[competitions] allwalessport WRU-like competition survived deterministic filter', {
+                id: c.id,
+                name: c.name,
+                slug: c.slug,
+                source: c.source,
+                competition_type: c.competition_type,
+              });
+            }
+          }
+
+          return true;
+        }
       );
       const sorted = [...filtered].sort((a, b) => {
         const pa = SOURCE_PRIORITY[a.source ?? ''] ?? 4;

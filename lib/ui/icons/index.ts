@@ -21,6 +21,7 @@ export const ICON_REGISTRY = {
   Football: 'football',
   Rugby: 'american-football',
   ArrowBack: 'arrow-back',
+  Close: 'close',
   Moon: 'moon',
   Sunny: 'sunny',
   PhonePortrait: 'phone-portrait-outline',

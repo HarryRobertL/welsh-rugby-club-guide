@@ -74,6 +74,26 @@ fixturesFromObjects.forEach((row) => {
 });
 console.log('parseFixtures(object): OK', fixturesFromObjects.length, 'rows');
 
+// Fixtures (polluted team name should be blanked so persist can skip)
+const pollutedFixtureJson = {
+  fixtures: [
+    {
+      id: 'polluted-1',
+      home_team_name: 'object Object Home',
+      away_team_name: 'Valid RFC',
+      kickoff_at: '2026-02-01T12:00:00.000Z',
+      status: 'scheduled',
+    },
+  ],
+};
+const pollutedFixtures = parseFixtures(pollutedFixtureJson, meta);
+if (pollutedFixtures.length !== 1) {
+  throw new Error(`parseFixtures(polluted) expected 1 row, got ${pollutedFixtures.length}`);
+}
+if (pollutedFixtures[0]?.home_team_name !== '') throw new Error('parseFixtures(polluted) should blank polluted home team name');
+if (pollutedFixtures[0]?.away_team_name !== 'Valid RFC') throw new Error('parseFixtures(polluted) should keep valid away team name');
+console.log('parseFixtures(polluted): OK', pollutedFixtures.length, 'rows');
+
 // Results
 const resultJson = loadFixture('result');
 const results = parseResults(resultJson, meta);

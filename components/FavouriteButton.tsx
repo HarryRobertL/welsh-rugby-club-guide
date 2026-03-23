@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Alert, Text, TouchableOpacity } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 import { useFavourites } from '../features/favourites/useFavourites';
 import type { FavouriteEntityType } from '../types/favourites';
+import { useResolvedColors } from '../lib/ui';
 
 type Props = {
   entityType: FavouriteEntityType;
@@ -15,6 +16,7 @@ type Props = {
  */
 export function FavouriteButton({ entityType, entityId, size = 24 }: Props) {
   const { isFavourite, toggleFavourite } = useFavourites();
+  const colors = useResolvedColors();
   const [pressing, setPressing] = useState(false);
   const favourited = isFavourite(entityType, entityId);
 
@@ -31,15 +33,38 @@ export function FavouriteButton({ entityType, entityId, size = 24 }: Props) {
   }
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={handlePress}
       disabled={pressing}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={{ padding: 4 }}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      accessibilityRole="button"
+      accessibilityLabel={favourited ? 'Remove from favourites' : 'Add to favourites'}
+      accessibilityState={{ selected: favourited, disabled: pressing }}
+      focusable
+      style={({ pressed }) => [
+        styles.button,
+        (pressed || pressing) && styles.buttonPressed,
+      ]}
     >
-      <Text style={{ fontSize: size, color: favourited ? '#c00' : '#999' }}>
+      <Text style={{ fontSize: size, color: favourited ? colors.error : colors.textMuted }}>
         {favourited ? '♥' : '♡'}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  button: {
+    minWidth: 44,
+    minHeight: 44,
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonPressed: {
+    opacity: 0.8,
+  },
+});

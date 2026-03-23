@@ -61,18 +61,11 @@ export default function ClubClaimsScreen() {
       if (!profile?.id) return;
       setBusyId(claim.id);
       try {
-        const { error: userErr } = await (supabase.from('users') as any)
-          .update({ role: 'club_admin', club_id: claim.club_id })
-          .eq('id', claim.user_id);
-        if (userErr) throw userErr;
-        const { error: claimErr } = await (supabase.from('pending_claims') as any)
-          .update({
-            status: 'approved',
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: profile.id,
-          })
-          .eq('id', claim.id);
-        if (claimErr) throw claimErr;
+        const { error } = await (supabase as any).rpc('review_pending_claim', {
+          claim_id_in: claim.id,
+          decision_in: 'approved',
+        });
+        if (error) throw error;
         await fetchClaims();
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : 'Failed to approve claim');
@@ -88,18 +81,11 @@ export default function ClubClaimsScreen() {
       if (!profile?.id) return;
       setBusyId(claim.id);
       try {
-        const { error: userErr } = await (supabase.from('users') as any)
-          .update({ club_id: null })
-          .eq('id', claim.user_id);
-        if (userErr) throw userErr;
-        const { error: claimErr } = await (supabase.from('pending_claims') as any)
-          .update({
-            status: 'rejected',
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: profile.id,
-          })
-          .eq('id', claim.id);
-        if (claimErr) throw claimErr;
+        const { error } = await (supabase as any).rpc('review_pending_claim', {
+          claim_id_in: claim.id,
+          decision_in: 'rejected',
+        });
+        if (error) throw error;
         await fetchClaims();
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : 'Failed to reject claim');
