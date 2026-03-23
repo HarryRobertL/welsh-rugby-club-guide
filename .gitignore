@@ -50,3 +50,19 @@ ingestion/.cache/
 
 # Supabase local
 .supabase/
+
+# Local Netlify folder
+.netlify
+
+# Playwright
+playwright-report/
+test-results/
+
+# Local archives (do not commit dumps)
+*.zip
+
+# Supabase CLI local branch pointer
+supabase/.branches/
+
+# Cursor / editor (local)
+.cursor/
