@@ -1,6 +1,6 @@
 # Welsh Rugby Club Guide (Cymru Rugby)
 
-Cross-platform guide to Welsh rugby competitions, fixtures, and clubs — built with **Expo** and **Supabase**. This repository is the source for [welsh-rugby-club-guide on GitHub](https://github.com/HarryRobertL/welsh-rugby-club-guide).
+Cross-platform guide to Welsh rugby competitions, fixtures, and clubs — built with **Expo** and **Supabase**. Source repository: [HarryRobertL/welsh-rugby-club-guide](https://github.com/HarryRobertL/welsh-rugby-club-guide).
 
 ## Tech stack
 
@@ -14,7 +14,7 @@ Cross-platform guide to Welsh rugby competitions, fixtures, and clubs — built 
 
 ## Architecture
 
-High-level data and trust boundaries: the **mobile/web client** uses only the **anon** Supabase key; **ingestion** uses the **service role** on a secure machine or CI, never in the shipped app.
+The **mobile/web client** uses only the Supabase **anon** key. **Ingestion** uses the **service role** on a secure machine or CI, never in the shipped app.
 
 ```mermaid
 flowchart TB
@@ -48,15 +48,13 @@ flowchart TB
   <img src="assets/login-page-logo.png" alt="Sign-in branding" width="200" />
 </p>
 
-_Add more UI captures under `docs/screenshots/` if you want a fuller gallery._
+Additional UI captures can live under `docs/screenshots/`.
 
 ## Live demo
 
-If the app is deployed (e.g. Netlify after `expo export --platform web`), **add your public URL here**:
+**Production:** [welshrugbyclubguide.com](https://welshrugbyclubguide.com/)
 
-**Demo:** `https://YOUR-SITE.netlify.app` _(replace with your deployed URL)_
-
-`netlify.toml` is configured for a single-page app-style redirect to `index.html` under `dist/`.
+**Expo web (static export):** After `npx expo export --platform web`, publish the `dist/` output; `netlify.toml` uses SPA-style redirects to `index.html`.
 
 ## Local setup
 
@@ -121,7 +119,7 @@ Apply SQL under `supabase/migrations/` in your Supabase project (SQL editor or [
 | `npm run test:ingest:allwalessport` | All Wales Sport parser test (if used) |
 | `npm run test:e2e` | Playwright smoke (starts Expo web on port 8085) |
 
-E2E tests that exercise sign-up/sign-in expect **`PLAYWRIGHT_SMOKE_EMAIL`** and **`PLAYWRIGHT_SMOKE_PASSWORD`** in `.env` (see `.env.example`). Use a disposable test account only.
+E2E flows that sign in expect **`PLAYWRIGHT_SMOKE_EMAIL`** and **`PLAYWRIGHT_SMOKE_PASSWORD`** in `.env` (see `.env.example`). Use a disposable test account only.
 
 ## Ingestion (optional)
 
@@ -131,16 +129,15 @@ Populate or refresh data from configured sources (requires service role and env 
 npm run ingest
 ```
 
-## Personal contributions
+## Author
 
-**Author: [Harry Robert L](https://github.com/HarryRobertL)** — _tune this paragraph for CVs or interviews._
+**Harry Robert L** — [GitHub](https://github.com/HarryRobertL)
 
-This project bundles end-to-end ownership of a small product: **Expo Router** UI (tabs for home, games, competitions, search, favourites, club-facing flows), **Supabase** integration with typed client code, **SQL migrations** for search deduplication and authorization hardening around club claims and roles, **Node ingestion** parsers and persistence, **Playwright** smoke coverage for web, and **Netlify** configuration for static web delivery. Replace this bullet list with your own narrative of what you personally designed, implemented, or led.
+Shipped the Cymru Rugby client on **Expo Router** (home, fixtures, competitions, search, favourites, club claim and admin flows), **Supabase** Auth and typed data access, **SQL migrations** for teams search deduplication and RLS hardening on club claims and roles, **Node** ingestion from public rugby sources, **Playwright** smoke tests for web, and **Netlify** configuration for static web export.
 
-## Repository hygiene
+## Contributing
 
-- **Secrets:** Use `.env` locally; commit only `.env.example`.
-- **Commit messages:** Prefer imperative, scoped messages (e.g. `feat: …`, `fix: …`, `docs: …`) so history stays readable.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commit style, and checks before opening a PR.
 
 ## Licence
 

@@ -113,5 +113,5 @@ Football solved this with Cymru Football. Rugby hasn’t.
 
 - Supabase free tier
 - Expo managed workflow
-- Cursor as primary dev environment
+- Standard editor and Git workflow (team choice)
 - One repo initially

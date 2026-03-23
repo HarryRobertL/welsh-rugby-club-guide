@@ -64,5 +64,6 @@ test-results/
 # Supabase CLI local branch pointer
 supabase/.branches/
 
-# Cursor / editor (local)
+# Editor / local tooling (not shared)
 .cursor/
+.cursorignore
