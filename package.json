@@ -1,6 +1,21 @@
 {
   "name": "cymru-rugby",
   "version": "1.0.0",
+  "description": "Welsh Rugby Club Guide — cross-platform fixtures, competitions, and clubs (Expo, React Native, Supabase). Companion to welshrugbyclubguide.com.",
+  "keywords": [
+    "expo",
+    "expo-router",
+    "react-native",
+    "react-native-web",
+    "supabase",
+    "typescript",
+    "rugby",
+    "wales",
+    "fixtures",
+    "postgresql",
+    "playwright",
+    "netlify"
+  ],
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
