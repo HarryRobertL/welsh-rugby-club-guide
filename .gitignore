@@ -64,6 +64,5 @@ test-results/
 # Supabase CLI local branch pointer
 supabase/.branches/
 
-# Editor / local tooling (not shared)
-.cursor/
-.cursorignore
+# JetBrains (local)
+.idea/

@@ -35,6 +35,8 @@ For Playwright smoke tests (`npm run test:e2e`), set `PLAYWRIGHT_SMOKE_EMAIL` an
 
 Never commit `.env`, API keys, or the Supabase service role key. Only `.env.example` belongs in Git.
 
+Do not commit machine-local editor or tooling directories (keep them out of `git add` and PRs).
+
 ## Database changes
 
 Ship SQL as ordered files under `supabase/migrations/` and document anything that must be run manually in the PR description.
